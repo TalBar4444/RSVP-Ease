@@ -1,13 +1,24 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-// משיכת משתני הסביבה שהגדרנו בקובץ ה-.env.development
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
-// בדיקת בטיחות קטנה כדי שלא נשכח להגדיר אותם
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase URL or Anon Key in environment variables');
 }
 
-// יצירת הקליינט והצואתו לשימוש בשאר חלקי האפליקציה
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+let adminClient: SupabaseClient | null = null;
+
+// Uses the service role key when configured to bypass RLS for admin reads (dev only).
+export function getAdminSupabase(): SupabaseClient {
+  if (supabaseServiceRoleKey) {
+    if (!adminClient) {
+      adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
+    }
+    return adminClient;
+  }
+  return supabase;
+}
