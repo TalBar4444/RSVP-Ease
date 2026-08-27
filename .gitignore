@@ -7,24 +7,49 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies and build
 node_modules
 dist
 dist-ssr
 *.local
 
-# Editor directories and files
+# Caches
+.npm
+.eslintcache
+*.tsbuildinfo
+.vite/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+coverage
+
+# Editor / OS
 .vscode/*
 !.vscode/extensions.json
 .idea
 .DS_Store
+Thumbs.db
+Desktop.ini
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
 
+# Environment (secrets)
 .env
-.env.local
-.env.development
-.env.production
-.env.development.local
+.env.*
+!.env.example
+
+# Deploy / local tooling
+.vercel
+supabase/.temp
+supabase/.branches
+
+# Cursor MCP (project-specific URLs or tokens)
+.cursor/mcp.json
+
+# Guest import source files (names, phones — PII)
+/data/*
+!/data/README.md
+guest_list.xlsx
+guest_list.csv

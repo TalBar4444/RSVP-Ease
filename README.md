@@ -1,24 +1,33 @@
 # RSVP-Ease ✉️🎉
 
-A modern, professional, and mobile-first RSVP management system designed to simplify wedding and event guest confirmations. Built with a serverless architecture using React, TypeScript, Vite, Tailwind CSS, and Supabase.
+A mobile-first RSVP app for **Tal & Shaked’s wedding** (29.10.2026, Badolina, Ra’anana). Guests confirm over a personal invite link — no password. Admins manage the list, send WhatsApp/SMS invites, and track headcount.
 
-The application allows guests to respond securely via a personalized unique link received on WhatsApp, without requiring a traditional username/password authentication flow.
+Built with React, TypeScript, Vite, Tailwind CSS, and Supabase.
 
 ## 🚀 Key Features
 
-- **Mobile-First Design:** Tailored specifically for flawless mobile experience since 95% of guests open invitations via smartphones.
-- **Personalized Access:** Secure token/ID-based access (`?id=guest-uuid`) that instantly identifies the guest and fetches their specific metadata.
-- **Advanced RSVP Form:** Dynamically toggles attendance states, adult/child guest counters, and discrete dietary requirements (Vegetarian, Vegan, Gluten-Free, and custom allergies).
-- **Serverless & Secure:** Direct communication with the Database handled securely via Supabase client, guarded by strict Row Level Security (RLS) policies.
-- **Production-Ready Tech Stack:** TypeScript for type safety, Vite for ultra-fast bundling, and Tailwind CSS for rapid modern styling.
+### Guest
+- **Personal invite links** (`/rsvp/<guest-uuid>`) — the UUID is the capability; no login.
+- **Hebrew, mobile-first RSVP** — attending / not attending, adult and child counts, dietary needs (vegetarian, vegan, gluten-free, free-text allergies).
+- **Home page** (`/`) reminds guests to use the WhatsApp link they were sent.
+
+### Admin (`/admin`)
+- **Email/password login** (Supabase Auth) with optional “remember me”. Access is limited to users listed in `admin_users`.
+- **KPIs** — confirmed headcount, adults vs children, pending replies, dietary totals.
+- **Guest list** — filter by status, edit group affiliation, delete guests.
+- **Add a guest** and send their invite via **WhatsApp**, **SMS**, or copied link.
+
+### Platform
+- Guests load and submit through `get_guest` / `submit_rsvp` RPCs; they cannot query the `guests` table directly.
+- Excel import of names, phones, and groups for the initial list.
 
 ---
 
 ## 🛠️ Tech Stack
 
-- **Frontend:** React 19, TypeScript, Vite, Tailwind CSS (v4)
-- **Backend-as-a-Service:** Supabase (PostgreSQL, Row Level Security)
-- **Deployment & CI/CD:** Vercel
+- **Frontend:** React 19, TypeScript, Vite, React Router, Tailwind CSS (v4)
+- **Backend-as-a-Service:** Supabase (PostgreSQL, Auth, Row Level Security)
+- **Deployment:** Vercel (SPA rewrites in `vercel.json`)
 
 ---
 
@@ -26,86 +35,108 @@ The application allows guests to respond securely via a personalized unique link
 
 ```text
 RSVP-Ease/
-├── .github/              # GitHub configurations
+├── public/                     # Logos
+├── scripts/import-guests.ts    # Excel → Supabase (service role)
 ├── src/
-│   ├── lib/              # Third-party service configurations
-│   │   └── supabaseClient.ts
-│   ├── App.tsx           # Main application router and RSVP form core
-│   ├── index.css         # Tailwind injection point
+│   ├── components/
+│   │   ├── admin/              # Login, dashboard, list, invites
+│   │   └── guest/              # RSVP form and wedding chrome
+│   ├── lib/                    # Supabase client, RPCs, invites, KPIs
+│   ├── pages/                  # Home
+│   ├── theme/                  # Colors, date, venue
+│   ├── types/
+│   ├── App.tsx
 │   └── main.tsx
-├── .env.development      # Local environment secrets (Git-ignored)
-├── .gitignore            # Security filters for sensitive configuration
-├── index.html
-├── package.json
-├── postcss.config.js     # PostCSS engine configurations
-└── tailwind.config.js    # Tailwind configuration mapping
+├── supabase/migrations/        # Access-control SQL
+├── vercel.json                 # Client-route rewrites
+└── .env.example
+```
 
-## ⚙️ Local Setup Instructions
-Follow these instructions to spin up the development environment on your local machine:
+## ⚙️ Local setup
 
-1. Prerequisites
-Ensure you have Node.js installed (v18+ recommended).
+1. **Prerequisites** — Node.js 18+.
 
-2. Clone and Install Dependencies
+2. **Install**
 
-# Navigate to your project root folder
+```bash
 cd RSVP-Ease
-
-# Install all node framework engines
 npm install
+```
 
-3. Setup Environment Variables
-Create a file named .env.development in the root directory (the file is already declared inside .gitignore to prevent data leakage to GitHub):
+3. **Environment** — copy `.env.example` to `.env.development` (git-ignored):
 
-VITE_SUPABASE_URL=[https://your-supabase-project-id.supabase.co](https://your-supabase-project-id.supabase.co)
-VITE_SUPABASE_ANON_KEY=your-public-anon-publishable-key-here
+```
+VITE_SUPABASE_URL=https://your-project-id.supabase.co
+VITE_SUPABASE_ANON_KEY=your-publishable-anon-key
+```
 
-4. Run Development Server
-Run Vite with the --host flag to safely expose the server to your local network, enabling live responsive testing directly on your mobile device
+Optional. Production origin for invite links (otherwise the current browser origin is used):
 
+```
+VITE_PUBLIC_SITE_URL=https://your-production-domain.com
+```
+
+For the Excel import script only, also set the service role key. **Never** prefix it with `VITE_` — Vite would expose it to the browser:
+
+```
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Set the same `VITE_*` variables in the Vercel project for production.
+
+4. **Dev server** — `--host` lets you open the app from a phone on the same network:
+
+```bash
 npm run dev -- --host
+```
 
-## 🗄️ Database Schema & RLS Setup
-Execute the following migration block inside the Supabase SQL Editor to establish the architecture of your data pipeline and seal its communication layer with proper RLS constraints:
+| Route | What |
+|---|---|
+| `/` | Home — “use your personal WhatsApp link” |
+| `/rsvp/<guest-uuid>` | Guest RSVP form |
+| `/rsvp/preview` | Dev-only mock form (no database) |
+| `/admin` | Admin dashboard (login required) |
 
--- 1. Table Blueprint Creation
-create table guests (
-  id uuid default gen_random_uuid() primary key,
-  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now()) not null,
-  name text not null,
-  phone text,
-  status text default 'pending' not null,       -- pending, attending, declined
-  guests_count integer default 0 not null,      -- total adult count
-  children_count integer default 0 not null,    -- total children count
-  
-  -- Culinary Tag Mapping
-  is_vegetarian boolean default false not null,
-  is_vegan boolean default false not null,
-  is_gluten_free boolean default false not null,
-  
-  -- Flexible text field for custom allergies/notes
-  other_dietary_notes text
-);
+Other scripts: `npm run build`, `npm run preview`, `npm run lint`.
 
--- 2. Enable Row Level Security Protection Layer
-alter table guests enable row level security;
+## 🗄️ Database access model
 
--- 3. Security Access Protocols
-create policy "Allow anonymous select by ID" 
-on guests for select 
-to anon 
-using (true);
+Schema and policies live in `supabase/migrations/`. The live project already has the `guests` table; access control is in `20260827_access_control.sql`.
 
-create policy "Allow anonymous update by ID" 
-on guests for update 
-to anon 
-using (true)
-with check (true);
+| Who | Access |
+|---|---|
+| Guest (`anon`) | No direct table access. Load/submit through `get_guest` / `submit_rsvp` with the invite UUID. |
+| Admin | Supabase Auth email/password. Row access only if `auth.uid()` exists in `admin_users`. |
+| Import script | Service role key on your machine. Bypasses RLS to insert guests. |
 
-##🔒 Security Best Practices
-Environment Separation: Always maintain separate Supabase projects for Development (dev) and Production (prod).
+### Add admin users
 
-Secret Keys: Never put your service_role or database direct root passwords anywhere on the client-side codebase.
+1. In Supabase: **Authentication → Users → Add user**. Use a real email and password. Enable **Auto Confirm User**.
+2. Grant dashboard access:
 
-Implicit Filters: Client queries must strictly filter requests by explicit conditional statements (.eq('id', guestId)) to respect individual data isolation boundaries enforced by the system layout.
+```sql
+insert into public.admin_users (user_id)
+select id from auth.users
+where email in ('first-admin@example.com', 'second-admin@example.com')
+on conflict (user_id) do nothing;
+```
+
+Repeat for every admin. Creating an Auth user is not enough on its own.
+
+### Import guests
+
+Place the Excel file at `data/guest_list.xlsx` (git-ignored) and run:
+
+```bash
+npm run import-guests
+```
+
+Expected columns (Hebrew or English headers): name (`שם המוזמן`), phone (`הנייד`), group (`שיוך לקבוצה`).
+
+## Security
+
+- The browser client uses only the publishable anon key.
+- Never put `service_role` or any `SUPABASE_SERVICE_ROLE_KEY` in a `VITE_` variable.
+- Keep separate Supabase projects for development and production.
+- Guest invite UUIDs are unguessable; they are still secrets — do not publish the full guest list of links.
+- Spreadsheets under `data/` contain names and phone numbers and are git-ignored.

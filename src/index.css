@@ -1,3 +1,52 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@500;600;700&family=Heebo:wght@400;500;600;700;800&display=swap');
+
+@import 'tailwindcss';
+
+html {
+  -webkit-text-size-adjust: 100%;
+  background: #fbf8f2;
+}
+
+body {
+  margin: 0;
+  font-family: 'Heebo', sans-serif;
+  background: #fbf8f2;
+  color: #082d58;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display {
+  font-family: 'Frank Ruhl Libre', 'Heebo', serif;
+}
+
+.guest-floral-corners {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  z-index: 0;
+  width: min(100%, 29.5625rem);
+  height: auto;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.guest-details {
+  animation: reveal-details 240ms ease-out both;
+}
+
+@keyframes reveal-details {
+  from {
+    opacity: 0;
+    transform: translateY(-0.4rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .guest-details {
+    animation: none;
+  }
+}

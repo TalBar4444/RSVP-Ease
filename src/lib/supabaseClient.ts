@@ -1,24 +1,82 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase URL or Anon Key in environment variables');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const REMEMBER_ME_KEY = 'rsvp-ease-admin-remember-me';
+const REMEMBERED_EMAIL_KEY = 'rsvp-ease-admin-email';
 
-let adminClient: SupabaseClient | null = null;
-
-// Uses the service role key when configured to bypass RLS for admin reads (dev only).
-export function getAdminSupabase(): SupabaseClient {
-  if (supabaseServiceRoleKey) {
-    if (!adminClient) {
-      adminClient = createClient(supabaseUrl, supabaseServiceRoleKey);
-    }
-    return adminClient;
+function readStorage(storage: Storage, key: string): string | null {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
   }
-  return supabase;
 }
+
+function writeStorage(storage: Storage, key: string, value: string) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    // Private mode or blocked storage — ignore.
+  }
+}
+
+function clearStorage(storage: Storage, key: string) {
+  try {
+    storage.removeItem(key);
+  } catch {
+    // ignore
+  }
+}
+
+export function getRememberMe(): boolean {
+  return readStorage(localStorage, REMEMBER_ME_KEY) !== '0';
+}
+
+export function getRememberedEmail(): string {
+  return getRememberMe() ? (readStorage(localStorage, REMEMBERED_EMAIL_KEY) ?? '') : '';
+}
+
+export function setRememberMe(remember: boolean) {
+  writeStorage(localStorage, REMEMBER_ME_KEY, remember ? '1' : '0');
+}
+
+export function setRememberedEmail(email: string | null) {
+  if (email) {
+    writeStorage(localStorage, REMEMBERED_EMAIL_KEY, email);
+  } else {
+    clearStorage(localStorage, REMEMBERED_EMAIL_KEY);
+  }
+}
+
+const authStorage = {
+  getItem(key: string) {
+    return readStorage(localStorage, key) ?? readStorage(sessionStorage, key);
+  },
+  setItem(key: string, value: string) {
+    if (getRememberMe()) {
+      clearStorage(sessionStorage, key);
+      writeStorage(localStorage, key, value);
+    } else {
+      clearStorage(localStorage, key);
+      writeStorage(sessionStorage, key, value);
+    }
+  },
+  removeItem(key: string) {
+    clearStorage(localStorage, key);
+    clearStorage(sessionStorage, key);
+  },
+};
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    storage: authStorage,
+  },
+});
