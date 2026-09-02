@@ -12,7 +12,7 @@ export default function WeddingHeader({ subtitle }: { subtitle?: string }) {
         />
       </div>
       <h1 className="text-[1.35rem] font-medium leading-snug tracking-[0.01em] text-[#082D58]">
-        החתונה של טל ושקד
+        החתונה של {wedding.coupleShort}
       </h1>
       <div className="mt-3 flex justify-center">
         <p className="inline-flex max-w-full items-center gap-3 whitespace-nowrap rounded-full border border-[#C5A059]/50 bg-[#C5A059]/[0.08] px-[1.15rem] py-[0.55rem]">

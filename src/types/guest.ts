@@ -1,5 +1,9 @@
 export type GuestStatus = 'pending' | 'attending' | 'declined';
 
+export function isGuestStatus(value: unknown): value is GuestStatus {
+  return value === 'pending' || value === 'attending' || value === 'declined';
+}
+
 export interface Guest {
   id: string;
   name: string;

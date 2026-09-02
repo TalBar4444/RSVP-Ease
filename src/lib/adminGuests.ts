@@ -1,5 +1,8 @@
-import type { Guest } from '../types/guest';
+import { isGuestStatus, type Guest } from '../types/guest';
 import { supabase } from './supabaseClient';
+
+const GUEST_COLUMNS =
+  'id, name, phone, group_affiliation, status, guests_count, children_count, is_vegetarian, is_vegan, is_gluten_free, other_dietary_notes';
 
 export async function isCurrentUserAdmin(): Promise<boolean> {
   const { data, error } = await supabase.rpc('is_current_user_admin');
@@ -7,10 +10,47 @@ export async function isCurrentUserAdmin(): Promise<boolean> {
   return data === true;
 }
 
+function parseGuest(data: unknown): Guest | null {
+  if (!data || typeof data !== 'object') return null;
+
+  const row = data as Record<string, unknown>;
+  if (typeof row.id !== 'string' || typeof row.name !== 'string') return null;
+  if (!isGuestStatus(row.status)) return null;
+  if (typeof row.guests_count !== 'number' || typeof row.children_count !== 'number') return null;
+  if (
+    typeof row.is_vegetarian !== 'boolean' ||
+    typeof row.is_vegan !== 'boolean' ||
+    typeof row.is_gluten_free !== 'boolean'
+  ) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    name: row.name,
+    phone: typeof row.phone === 'string' ? row.phone : null,
+    group_affiliation: typeof row.group_affiliation === 'string' ? row.group_affiliation : null,
+    status: row.status,
+    guests_count: row.guests_count,
+    children_count: row.children_count,
+    is_vegetarian: row.is_vegetarian,
+    is_vegan: row.is_vegan,
+    is_gluten_free: row.is_gluten_free,
+    other_dietary_notes: typeof row.other_dietary_notes === 'string' ? row.other_dietary_notes : null,
+  };
+}
+
 export async function fetchGuests(): Promise<Guest[]> {
-  const { data, error } = await supabase.from('guests').select('*').order('name');
+  const { data, error } = await supabase.from('guests').select(GUEST_COLUMNS).order('name');
   if (error) throw error;
-  return (data as Guest[]) ?? [];
+
+  const guests: Guest[] = [];
+  for (const row of data ?? []) {
+    const parsed = parseGuest(row);
+    if (!parsed) throw new Error('Invalid guest row from database.');
+    guests.push(parsed);
+  }
+  return guests;
 }
 
 export async function addGuest(input: {
@@ -26,11 +66,13 @@ export async function addGuest(input: {
       group_affiliation: input.groupAffiliation,
       status: 'pending',
     })
-    .select('*')
+    .select(GUEST_COLUMNS)
     .single();
 
   if (error) throw error;
-  return data as Guest;
+  const parsed = parseGuest(data);
+  if (!parsed) throw new Error('Invalid guest row from database.');
+  return parsed;
 }
 
 export async function updateGuestGroup(guestId: string, groupAffiliation: string | null): Promise<void> {

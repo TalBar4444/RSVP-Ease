@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchGuestRsvp, submitGuestRsvp } from '../../lib/guestRsvp';
 import { wedding } from '../../theme/wedding';
-import type { GuestRsvp } from '../../types/guest';
+import type { GuestRsvp, GuestStatus } from '../../types/guest';
 import ChoiceButton from './ChoiceButton';
 import GuestShell from './GuestShell';
 import { IconChild, IconPeople, IconPlane, IconQuestion, IconWheat } from './icons';
@@ -27,9 +27,12 @@ export default function GuestRsvpForm() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const guestIdRef = useRef(guestId);
+  const submitIdRef = useRef(0);
 
-  const [status, setStatus] = useState('pending');
+  const [status, setStatus] = useState<GuestStatus>('pending');
   const [guestsCount, setGuestsCount] = useState(1);
   const [childrenCount, setChildrenCount] = useState(0);
   const [isVegetarian, setIsVegetarian] = useState(false);
@@ -40,10 +43,13 @@ export default function GuestRsvpForm() {
 
   useEffect(() => {
     let cancelled = false;
+    guestIdRef.current = guestId;
+    submitIdRef.current += 1;
 
     async function fetchGuest() {
       setLoading(true);
       setError(null);
+      setSubmitError(null);
       setSuccess(false);
       setGuest(null);
 
@@ -93,25 +99,30 @@ export default function GuestRsvpForm() {
     void fetchGuest();
     return () => {
       cancelled = true;
+      guestIdRef.current = undefined;
+      submitIdRef.current += 1;
     };
   }, [guestId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guest) return;
+    if (status !== 'attending' && status !== 'declined') return;
 
     if (import.meta.env.DEV && guest.id === previewGuest.id) {
       setSuccess(true);
       return;
     }
 
+    const submittedGuestId = guest.id;
+    const submitId = ++submitIdRef.current;
     setSubmitting(true);
-    try {
-      if (status !== 'attending' && status !== 'declined') return;
+    setSubmitError(null);
 
+    try {
       const isAttending = status === 'attending';
       await submitGuestRsvp({
-        guestId: guest.id,
+        guestId: submittedGuestId,
         status,
         guestsCount: isAttending ? guestsCount : 0,
         childrenCount: isAttending ? childrenCount : 0,
@@ -120,12 +131,14 @@ export default function GuestRsvpForm() {
         isGlutenFree: isAttending && isGlutenFree,
         otherDietaryNotes: isAttending && showOtherText ? otherDietary : null,
       });
+      if (submitId !== submitIdRef.current || guestIdRef.current !== submittedGuestId) return;
       setSuccess(true);
     } catch (err) {
       console.error(err);
-      alert('אירעה שגיאה בעדכון התשובה. נא לנסות שוב.');
+      if (submitId !== submitIdRef.current || guestIdRef.current !== submittedGuestId) return;
+      setSubmitError('אירעה שגיאה בעדכון התשובה. נא לנסות שוב.');
     } finally {
-      setSubmitting(false);
+      if (submitId === submitIdRef.current) setSubmitting(false);
     }
   };
 
@@ -172,7 +185,7 @@ export default function GuestRsvpForm() {
             <IconQuestion />
             <h2 className="text-[1.08rem] font-medium">האם תגיעו לחגוג איתנו?</h2>
           </div>
-          <div className="grid grid-cols-2 gap-[1.15rem]">
+          <div className="grid grid-cols-2 gap-[1.15rem]" role="radiogroup" aria-label="האם תגיעו לחגוג איתנו?">
             <ChoiceButton selected={status === 'attending'} onClick={() => setStatus('attending')} className="min-h-[3.2rem]">
               בטח שמגיעים
             </ChoiceButton>
@@ -191,6 +204,7 @@ export default function GuestRsvpForm() {
               </div>
               <Stepper
                 value={guestsCount}
+                min={1}
                 onDecrease={() => setGuestsCount(Math.max(1, guestsCount - 1))}
                 onIncrease={() => setGuestsCount(guestsCount + 1)}
                 decreaseLabel="הפחתת מבוגרים"
@@ -205,6 +219,7 @@ export default function GuestRsvpForm() {
               </div>
               <Stepper
                 value={childrenCount}
+                min={0}
                 onDecrease={() => setChildrenCount(Math.max(0, childrenCount - 1))}
                 onIncrease={() => setChildrenCount(childrenCount + 1)}
                 decreaseLabel="הפחתת ילדים"
@@ -241,8 +256,10 @@ export default function GuestRsvpForm() {
 
               {showOtherText && (
                 <textarea
+                  id="other-dietary"
                   value={otherDietary}
                   onChange={(e) => setOtherDietary(e.target.value)}
+                  aria-label="פירוט אלרגיות או בקשות מיוחדות"
                   placeholder="פירוט אלרגיות או בקשות מיוחדות..."
                   rows={2}
                   className="mt-2 w-full resize-none rounded-lg border border-[#C5A059] bg-white/75 p-3 text-base text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/20"
@@ -252,6 +269,8 @@ export default function GuestRsvpForm() {
           </div>
         )}
 
+        {submitError ? <p className="mt-3 text-center text-sm text-rose-700">{submitError}</p> : null}
+
         <button
           type="submit"
           disabled={submitting || status === 'pending'}
@@ -259,7 +278,7 @@ export default function GuestRsvpForm() {
         >
           {submitting ? 'שומר תשובה...' : 'שליחת עדכון'}
           {!(submitting || status === 'pending') ? (
-            <span className="absolute left-5 top-1/2 -translate-y-1/2">
+            <span className="absolute left-5 top-1/2 -translate-y-1/2" aria-hidden="true">
               <IconPlane />
             </span>
           ) : null}

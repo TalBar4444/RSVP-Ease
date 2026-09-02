@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from 'react-router-dom';
 import AdminDashboard from './components/admin/AdminDashboard';
+import { AdminDataProvider } from './components/admin/AdminDataProvider';
 import GuestRsvpForm from './components/guest/GuestRsvpForm';
 import HomePage from './pages/HomePage';
 
@@ -22,12 +23,14 @@ function HomeOrLegacyRedirect() {
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomeOrLegacyRedirect />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/rsvp/:guestId" element={<GuestRsvpForm />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AdminDataProvider>
+        <Routes>
+          <Route path="/" element={<HomeOrLegacyRedirect />} />
+          <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/rsvp/:guestId" element={<GuestRsvpForm />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AdminDataProvider>
     </BrowserRouter>
   );
 }

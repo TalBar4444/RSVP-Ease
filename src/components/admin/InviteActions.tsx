@@ -1,18 +1,40 @@
-import { useState } from 'react';
-import { getGuestRsvpUrl, getSmsInviteUrl, getWhatsAppInviteUrl } from '../../lib/guestInvites';
+import { useEffect, useRef, useState } from 'react';
+import { getGuestRsvpUrl, getSmsInviteUrl, getWhatsAppInviteUrl, openWhatsAppChat } from '../../lib/guestInvites';
+import { DEFAULT_MESSAGE_TYPE, type MessageType } from '../../lib/messageTemplates';
 import type { Guest } from '../../types/guest';
 
-export default function InviteActions({ guest }: { guest: Guest }) {
+export default function InviteActions({
+  guest,
+  messageType = DEFAULT_MESSAGE_TYPE,
+}: {
+  guest: Guest;
+  messageType?: MessageType;
+}) {
   const [copied, setCopied] = useState(false);
+  const copiedTimeoutRef = useRef<number | null>(null);
   const rsvpUrl = getGuestRsvpUrl(guest.id);
-  const whatsappUrl = guest.phone ? getWhatsAppInviteUrl(guest.name, guest.phone, guest.id) : null;
-  const smsUrl = guest.phone ? getSmsInviteUrl(guest.name, guest.phone, guest.id) : null;
+  const whatsappUrl = guest.phone ? getWhatsAppInviteUrl(guest.phone, guest.id, messageType) : null;
+  const smsUrl = guest.phone ? getSmsInviteUrl(guest.phone, guest.id, messageType) : null;
+
+  useEffect(() => {
+    return () => {
+      if (copiedTimeoutRef.current !== null) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(rsvpUrl);
       setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
+      if (copiedTimeoutRef.current !== null) {
+        window.clearTimeout(copiedTimeoutRef.current);
+      }
+      copiedTimeoutRef.current = window.setTimeout(() => {
+        setCopied(false);
+        copiedTimeoutRef.current = null;
+      }, 2000);
     } catch (err) {
       console.error(err);
     }
@@ -30,8 +52,13 @@ export default function InviteActions({ guest }: { guest: Guest }) {
       {whatsappUrl ? (
         <a
           href={whatsappUrl}
-          target="_blank"
-          rel="noreferrer"
+          onClick={(event) => {
+            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+              return;
+            }
+            event.preventDefault();
+            openWhatsAppChat(whatsappUrl);
+          }}
           className="rounded-lg border border-[#082D58] bg-[#082D58] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-[#0b3a70]"
         >
           וואטסאפ

@@ -1,4 +1,4 @@
-import type { GuestRsvp, GuestStatus } from '../types/guest';
+import { isGuestStatus, type GuestRsvp, type GuestStatus } from '../types/guest';
 import { supabase } from './supabaseClient';
 
 const UUID_RE =
@@ -6,10 +6,6 @@ const UUID_RE =
 
 export function isGuestId(value: string): boolean {
   return UUID_RE.test(value);
-}
-
-function isGuestStatus(value: unknown): value is GuestStatus {
-  return value === 'pending' || value === 'attending' || value === 'declined';
 }
 
 function parseGuestRsvp(data: unknown): GuestRsvp | null {

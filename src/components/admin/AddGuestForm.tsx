@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { addGuest } from '../../lib/adminGuests';
+import { toWhatsAppNumber } from '../../lib/guestInvites';
 import type { Guest } from '../../types/guest';
 import InviteActions from './InviteActions';
 
@@ -10,6 +11,13 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [lastAdded, setLastAdded] = useState<Guest | null>(null);
+  const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      requestIdRef.current += 1;
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,6 +30,12 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
       return;
     }
 
+    if (trimmedPhone && !toWhatsAppNumber(trimmedPhone)) {
+      setFormError('מספר הטלפון אינו תקין.');
+      return;
+    }
+
+    const requestId = ++requestIdRef.current;
     setSubmitting(true);
     setFormError(null);
 
@@ -32,6 +46,7 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
         groupAffiliation: trimmedGroup || null,
       });
 
+      if (requestId !== requestIdRef.current) return;
       onGuestAdded(created);
       setLastAdded(created);
       setName('');
@@ -39,9 +54,10 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
       setGroupAffiliation('');
     } catch (err) {
       console.error(err);
+      if (requestId !== requestIdRef.current) return;
       setFormError('לא ניתן להוסיף את האורח. נסו שוב בעוד רגע.');
     } finally {
-      setSubmitting(false);
+      if (requestId === requestIdRef.current) setSubmitting(false);
     }
   };
 
@@ -112,7 +128,7 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
           <p className="mb-3 text-sm text-[#082D58]">
             {lastAdded.name} נוסף לרשימה. שלחו את קישור האישור:
           </p>
-          <InviteActions guest={lastAdded} />
+          <InviteActions guest={lastAdded} messageType="invitation" />
         </div>
       ) : null}
     </section>

@@ -111,7 +111,12 @@ async function main() {
   let inserted = 0;
 
   for (let i = 0; i < guests.length; i += batchSize) {
-    const batch = guests.slice(i, i + batchSize).map(({ rowNumber: _rowNumber, ...guest }) => guest);
+    const batch = guests.slice(i, i + batchSize).map((guest) => ({
+      name: guest.name,
+      phone: guest.phone,
+      group_affiliation: guest.group_affiliation,
+      status: guest.status,
+    }));
     const { data, error } = await supabase.from('guests').insert(batch).select('id');
 
     if (error) {

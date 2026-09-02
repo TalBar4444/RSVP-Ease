@@ -6,4 +6,7 @@ export const wedding = {
   muted: '#6B778C',
   date: '29.10.2026',
   venue: 'בדולינה, רעננה',
+  receptionTime: '19:30',
+  coupleShort: 'טל ושקד',
+  coupleFull: 'טל בר ושקד שושן',
 } as const;

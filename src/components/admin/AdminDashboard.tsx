@@ -1,119 +1,38 @@
-import { useEffect, useMemo, useState } from 'react';
-import type { Session } from '@supabase/supabase-js';
-import { fetchGuests, isCurrentUserAdmin } from '../../lib/adminGuests';
+import { useEffect, useMemo, useRef } from 'react';
 import { computeGuestKpis } from '../../lib/guestAnalytics';
-import { supabase } from '../../lib/supabaseClient';
-import type { Guest } from '../../types/guest';
+import { wedding } from '../../theme/wedding';
 import AddGuestForm from './AddGuestForm';
+import { useAdminData } from './adminData';
 import AdminLogin from './AdminLogin';
 import AdminShell, { GoldDivider } from './AdminShell';
 import GuestList from './GuestList';
 
 export default function AdminDashboard() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [adminCheckDone, setAdminCheckDone] = useState(false);
-  const [guests, setGuests] = useState<Guest[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const {
+    session,
+    authReady,
+    isAdmin,
+    adminCheckDone,
+    guests,
+    guestsLoaded,
+    error,
+    addGuestToCache,
+    updateGuestGroupInCache,
+    removeGuestFromCache,
+    refreshGuests,
+    signOut,
+  } = useAdminData();
 
-  const handleGuestAdded = (guest: Guest) => {
-    setGuests((current) => [...current, guest].sort((a, b) => a.name.localeCompare(b.name, 'he')));
-  };
+  const hadCacheOnMount = useRef(guestsLoaded);
 
-  const handleGuestGroupUpdated = (guestId: string, groupAffiliation: string | null) => {
-    setGuests((current) =>
-      current.map((guest) =>
-        guest.id === guestId ? { ...guest, group_affiliation: groupAffiliation } : guest,
-      ),
-    );
-  };
-
-  const handleGuestRemoved = (guestId: string) => {
-    setGuests((current) => current.filter((guest) => guest.id !== guestId));
-  };
-
-  const handleSignOut = () => {
-    void supabase.auth.signOut();
-  };
+  useEffect(() => {
+    if (!hadCacheOnMount.current || !isAdmin) return;
+    void refreshGuests();
+  }, [isAdmin, refreshGuests]);
 
   const metrics = useMemo(() => computeGuestKpis(guests), [guests]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    void supabase.auth.getSession().then(({ data }) => {
-      if (cancelled) return;
-      setSession(data.session);
-      setAuthReady(true);
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-    });
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!session) {
-      setIsAdmin(false);
-      setAdminCheckDone(false);
-      setGuests([]);
-      setError(null);
-      return;
-    }
-
-    let cancelled = false;
-    setAdminCheckDone(false);
-
-    async function verifyAdmin() {
-      try {
-        const allowed = await isCurrentUserAdmin();
-        if (cancelled) return;
-        setIsAdmin(allowed);
-        setError(allowed ? null : 'אין הרשאת מנהל לחשבון זה.');
-      } catch (err) {
-        console.error(err);
-        if (cancelled) return;
-        setIsAdmin(false);
-        setError('לא ניתן לבדוק הרשאות מנהל.');
-      } finally {
-        if (!cancelled) setAdminCheckDone(true);
-      }
-    }
-
-    void verifyAdmin();
-    return () => {
-      cancelled = true;
-    };
-  }, [session]);
-
-  useEffect(() => {
-    if (!session || !isAdmin) return;
-
-    async function loadGuests() {
-      setLoading(true);
-      setError(null);
-
-      try {
-        setGuests(await fetchGuests());
-      } catch (err) {
-        console.error(err);
-        setError('אירעה שגיאה בטעינת נתוני האורחים.');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    void loadGuests();
-  }, [session, isAdmin]);
+  const blockingError = error?.kind === 'permission' || error?.kind === 'admin_check';
+  const guestsError = error?.kind === 'guests' ? error : null;
 
   if (!authReady) {
     return (
@@ -127,7 +46,7 @@ export default function AdminDashboard() {
     return <AdminLogin />;
   }
 
-  if (!adminCheckDone || (isAdmin && loading && !error)) {
+  if (!adminCheckDone || (isAdmin && !guestsLoaded && !guestsError)) {
     return (
       <AdminShell compact>
         <p className="animate-pulse text-lg text-[#6F7C91]">טוען את לוח הבקרה...</p>
@@ -135,20 +54,46 @@ export default function AdminDashboard() {
     );
   }
 
-  if (!isAdmin || error) {
+  if (!isAdmin || blockingError) {
     return (
       <AdminShell compact>
         <div className="max-w-md text-center">
           <p className="font-medium leading-relaxed text-rose-700">
-            {error ?? 'אין הרשאת מנהל לחשבון זה.'}
+            {error?.message ?? 'אין הרשאת מנהל לחשבון זה.'}
           </p>
           <button
             type="button"
-            onClick={handleSignOut}
+            onClick={signOut}
             className="mt-4 rounded-lg border border-[#C5A059]/80 bg-white/70 px-4 py-2 text-sm font-medium text-[#082D58] transition-colors hover:bg-white"
           >
             יציאה
           </button>
+        </div>
+      </AdminShell>
+    );
+  }
+
+  if (!guestsLoaded && guestsError) {
+    return (
+      <AdminShell compact>
+        <div className="max-w-md text-center">
+          <p className="font-medium leading-relaxed text-rose-700">{guestsError.message}</p>
+          <div className="mt-4 flex justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => void refreshGuests()}
+              className="rounded-lg bg-[#082D58] px-4 py-2 text-sm font-medium text-white"
+            >
+              נסו שוב
+            </button>
+            <button
+              type="button"
+              onClick={signOut}
+              className="rounded-lg border border-[#C5A059]/80 bg-white/70 px-4 py-2 text-sm font-medium text-[#082D58] transition-colors hover:bg-white"
+            >
+              יציאה
+            </button>
+          </div>
         </div>
       </AdminShell>
     );
@@ -159,7 +104,7 @@ export default function AdminDashboard() {
       <header className="mb-8">
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="text-center sm:text-start">
-            <p className="text-sm text-[#6F7C91]">החתונה של טל ושקד</p>
+            <p className="text-sm text-[#6F7C91]">החתונה של {wedding.coupleShort}</p>
             <h1 className="mt-1 text-3xl font-medium">לוח ניהול RSVP</h1>
             <p className="mt-1 text-[#6F7C91]">סקירת אורחים, אישורים והעדפות קולינריות</p>
           </div>
@@ -167,7 +112,7 @@ export default function AdminDashboard() {
             <img src="/logo-cropped.png" alt="" className="h-[4.5rem] w-auto object-contain" />
             <button
               type="button"
-              onClick={handleSignOut}
+              onClick={signOut}
               className="rounded-lg border border-[#C5A059]/80 bg-white/70 px-3 py-1.5 text-xs font-medium text-[#082D58] transition-colors hover:bg-white"
             >
               יציאה
@@ -176,6 +121,19 @@ export default function AdminDashboard() {
         </div>
         <GoldDivider className="mx-auto mt-6 max-w-xs sm:mx-0 sm:max-w-[16rem]" />
       </header>
+
+      {guestsError ? (
+        <div className="mb-6 flex flex-col items-start justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-5 py-4 sm:flex-row sm:items-center">
+          <p className="text-sm font-medium text-rose-700">{guestsError.message}</p>
+          <button
+            type="button"
+            onClick={() => void refreshGuests()}
+            className="rounded-lg border border-rose-300 bg-white px-3 py-1.5 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100"
+          >
+            נסו שוב
+          </button>
+        </div>
+      ) : null}
 
       <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-[#E6DCCB] bg-white/55 p-5">
@@ -214,11 +172,12 @@ export default function AdminDashboard() {
               <span className="font-medium">{metrics.glutenFreeCount}</span> ללא גלוטן
             </span>
           </div>
+          <p className="mt-2 text-xs text-[#9AA6B8]">לפי הזמנה, לא לפי מספר סועדים</p>
         </article>
       </div>
 
-      <AddGuestForm onGuestAdded={handleGuestAdded} />
-      <GuestList guests={guests} onGroupUpdated={handleGuestGroupUpdated} onDeleted={handleGuestRemoved} />
+      <AddGuestForm onGuestAdded={addGuestToCache} />
+      <GuestList guests={guests} onGroupUpdated={updateGuestGroupInCache} onDeleted={removeGuestFromCache} />
     </AdminShell>
   );
 }
