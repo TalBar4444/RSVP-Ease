@@ -5,10 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc -b",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "import-guests": "tsx scripts/import-guests.ts"
+    "import-guests": "tsx scripts/import-guests.ts",
+    "security:audit": "npm audit",
+    "security:snyk": "npx --yes snyk@1 test --dev",
+    "security": "npm run security:audit && npm run security:snyk",
+    "db:reset": "npx supabase db reset --local",
+    "db:test": "npx supabase test db",
+    "db:lint": "npx supabase db lint"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
@@ -35,6 +42,6 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }
 }

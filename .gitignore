@@ -39,11 +39,19 @@ Desktop.ini
 .env
 .env.*
 !.env.example
+!.env.import.example
 
 # Deploy / local tooling
 .vercel
-supabase/.temp
-supabase/.branches
+
+# Supabase CLI local runtime (linked-project cache, start secrets).
+# supabase/.gitignore also ignores these.
+supabase/.temp/
+supabase/.branches/
+
+# Postgres dumps and off-repo restore files (may contain guest PII)
+*.dump
+/backups/
 
 # Cursor MCP (project-specific URLs or tokens)
 .cursor/mcp.json

@@ -1,0 +1,24 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.1
+# ignores vulnerabilities until expiry date; change duration by modifying expiry date
+ignore:
+  SNYK-JS-XLSX-5457926:
+    - '*':
+        reason: >-
+          False positive: this project uses SheetJS CE xlsx@0.20.3 from
+          cdn.sheetjs.com. Prototype pollution (CVE-2023-30533) was fixed in
+          SheetJS 0.19.3. Snyk still matches the package name to the last public
+          npm release (0.18.5), which never received that fix.
+        expires: 2026-12-31T00:00:00.000Z
+        created: 2026-09-03T16:42:12.405Z
+  SNYK-JS-XLSX-6252523:
+    - '*':
+        reason: >-
+          False positive: this project uses SheetJS CE xlsx@0.20.3 from
+          cdn.sheetjs.com. Regular Expression Denial of Service
+          (CVE-2024-22363) was fixed in SheetJS 0.20.2. Snyk still reports the
+          issue against 0.20.3 because it maps the package name to the unpatched
+          npm registry line.
+        expires: 2026-12-31T00:00:00.000Z
+        created: 2026-09-03T16:42:17.524Z
+patch: {}
