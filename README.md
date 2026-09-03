@@ -130,7 +130,7 @@ npm run db:test
 npm run db:lint
 ```
 
-`db reset --local` also loads `supabase/seed.sql` (synthetic guests only). CI runs the same pgTAP tests and `db lint` after `supabase db start`.
+`db reset --local` also loads `supabase/seed.sql` (synthetic guests only). CI runs the same pgTAP tests and `db lint` after `supabase db start`. Guest `updated_at` is maintained by trigger `guests_set_updated_at` on every update (admin edits and `submit_rsvp`). Admin delete stays a confirmed hard delete.
 
 **Never run** `supabase db reset --linked`, `supabase db reset --project-ref …`, or any remote `TRUNCATE` / `DROP TABLE` against production. `--linked` would wipe the linked cloud database.
 
