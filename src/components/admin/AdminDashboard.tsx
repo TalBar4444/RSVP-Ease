@@ -17,7 +17,7 @@ export default function AdminDashboard() {
     guestsLoaded,
     error,
     addGuestToCache,
-    updateGuestGroupInCache,
+    updateGuestInCache,
     removeGuestFromCache,
     refreshGuests,
     signOut,
@@ -177,7 +177,7 @@ export default function AdminDashboard() {
       </div>
 
       <AddGuestForm onGuestAdded={addGuestToCache} />
-      <GuestList guests={guests} onGroupUpdated={updateGuestGroupInCache} onDeleted={removeGuestFromCache} />
+      <GuestList guests={guests} onGuestUpdated={updateGuestInCache} onDeleted={removeGuestFromCache} />
     </AdminShell>
   );
 }

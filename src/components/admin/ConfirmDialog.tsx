@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
+import { useDialogFocusTrap } from '../../hooks/useDialogFocusTrap';
 
 type ConfirmDialogProps = {
   open: boolean;
@@ -24,68 +25,22 @@ export default function ConfirmDialog({
   onCancel,
 }: ConfirmDialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const onCancelRef = useRef(onCancel);
-  const loadingRef = useRef(loading);
 
-  useEffect(() => {
-    onCancelRef.current = onCancel;
-    loadingRef.current = loading;
-  }, [onCancel, loading]);
-
-  useEffect(() => {
-    if (!open) return;
-
-    const dialog = dialogRef.current;
-    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-
-    const getFocusable = () => {
-      if (!dialog) return [];
-      return [...dialog.querySelectorAll<HTMLElement>('button:not([disabled])')];
-    };
-
-    const focusable = getFocusable();
-    (focusable[0] ?? dialog)?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        if (loadingRef.current) return;
-        event.preventDefault();
-        onCancelRef.current();
-        return;
-      }
-
-      if (event.key !== 'Tab') return;
-
-      const nodes = getFocusable();
-      if (nodes.length === 0) {
-        event.preventDefault();
-        dialog?.focus();
-        return;
-      }
-
-      const first = nodes[0];
-      const last = nodes[nodes.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      previouslyFocused?.focus();
-    };
-  }, [open]);
+  useDialogFocusTrap({
+    dialogRef,
+    active: open,
+    capture: true,
+    onEscape: () => {
+      if (loading) return;
+      onCancel();
+    },
+  });
 
   if (!open) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#082D58]/45 px-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#082D58]/45 px-4"
       onClick={loading ? undefined : onCancel}
       role="presentation"
     >

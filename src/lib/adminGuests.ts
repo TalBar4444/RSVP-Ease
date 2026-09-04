@@ -1,4 +1,4 @@
-import { isGuestStatus, type Guest } from '../types/guest';
+import { isGuestStatus, type Guest, type GuestStatus } from '../types/guest';
 import { supabase } from './supabaseClient';
 
 const GUEST_COLUMNS =
@@ -75,13 +75,48 @@ export async function addGuest(input: {
   return parsed;
 }
 
-export async function updateGuestGroup(guestId: string, groupAffiliation: string | null): Promise<void> {
-  const { error } = await supabase
+export type GuestUpdateInput = {
+  name: string;
+  phone: string | null;
+  groupAffiliation: string | null;
+  status: GuestStatus;
+  guestsCount: number;
+  childrenCount: number;
+  isVegetarian: boolean;
+  isVegan: boolean;
+  isGlutenFree: boolean;
+  otherDietaryNotes: string | null;
+};
+
+export async function updateGuest(guestId: string, input: GuestUpdateInput): Promise<Guest> {
+  const { data, error } = await supabase
     .from('guests')
-    .update({ group_affiliation: groupAffiliation })
-    .eq('id', guestId);
+    .update({
+      name: input.name,
+      phone: input.phone,
+      group_affiliation: input.groupAffiliation,
+      status: input.status,
+      guests_count: input.guestsCount,
+      children_count: input.childrenCount,
+      is_vegetarian: input.isVegetarian,
+      is_vegan: input.isVegan,
+      is_gluten_free: input.isGlutenFree,
+      other_dietary_notes: input.otherDietaryNotes,
+    })
+    .eq('id', guestId)
+    .select(GUEST_COLUMNS);
 
   if (error) throw error;
+  if (!data?.length) {
+    throw new Error('Update returned 0 rows — this account may not be in admin_users.');
+  }
+
+  const parsed = parseGuest(data[0]);
+  if (!parsed) throw new Error('Invalid guest row from database.');
+  if (parsed.id !== guestId) {
+    throw new Error('Update returned a different guest than requested.');
+  }
+  return parsed;
 }
 
 export async function deleteGuest(guestId: string): Promise<void> {

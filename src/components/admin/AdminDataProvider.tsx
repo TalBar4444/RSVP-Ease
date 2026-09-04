@@ -141,12 +141,10 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     setGuests((current) => sortGuests([...current, guest]));
   }, []);
 
-  const updateGuestGroupInCache = useCallback((guestId: string, groupAffiliation: string | null) => {
+  const updateGuestInCache = useCallback((guest: Guest) => {
     if (!userIdRef.current) return;
     setGuests((current) =>
-      current.map((guest) =>
-        guest.id === guestId ? { ...guest, group_affiliation: groupAffiliation } : guest,
-      ),
+      sortGuests(current.map((existing) => (existing.id === guest.id ? guest : existing))),
     );
   }, []);
 
@@ -191,7 +189,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       guestsLoaded,
       error,
       addGuestToCache,
-      updateGuestGroupInCache,
+      updateGuestInCache,
       removeGuestFromCache,
       refreshGuests,
       signOut,
@@ -205,7 +203,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       guestsLoaded,
       error,
       addGuestToCache,
-      updateGuestGroupInCache,
+      updateGuestInCache,
       removeGuestFromCache,
       refreshGuests,
       signOut,

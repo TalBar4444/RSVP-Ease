@@ -16,7 +16,7 @@ export type AdminData = {
   guestsLoaded: boolean;
   error: AdminError | null;
   addGuestToCache: (guest: Guest) => void;
-  updateGuestGroupInCache: (guestId: string, groupAffiliation: string | null) => void;
+  updateGuestInCache: (guest: Guest) => void;
   removeGuestFromCache: (guestId: string) => void;
   refreshGuests: () => Promise<void>;
   signOut: () => void;
