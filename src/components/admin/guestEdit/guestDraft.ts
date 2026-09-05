@@ -37,6 +37,23 @@ export function guestToDraft(guest: Guest): GuestDraft {
   };
 }
 
+export function guestDraftsEqual(left: GuestDraft, right: GuestDraft): boolean {
+  return (
+    left.name === right.name &&
+    left.phone === right.phone &&
+    left.groupAffiliation === right.groupAffiliation &&
+    left.creatingNewGroup === right.creatingNewGroup &&
+    left.newGroupName === right.newGroupName &&
+    left.status === right.status &&
+    left.guestsCount === right.guestsCount &&
+    left.childrenCount === right.childrenCount &&
+    left.isVegetarian === right.isVegetarian &&
+    left.isVegan === right.isVegan &&
+    left.isGlutenFree === right.isGlutenFree &&
+    left.otherDietaryNotes === right.otherDietaryNotes
+  );
+}
+
 export function parseCount(value: string): number | null {
   if (value.trim() === '') return null;
   const parsed = Number(value);

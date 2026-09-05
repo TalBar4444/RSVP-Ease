@@ -12,7 +12,7 @@ Built with React, TypeScript, Vite, Tailwind CSS, and Supabase.
 - **Home page** (`/`) reminds guests to use the WhatsApp link they were sent.
 
 ### Admin (`/admin`)
-- **Email/password login** (Supabase Auth) with optional “remember me”. Access is limited to users listed in `admin_users`.
+- **Email/password login** (Supabase Auth) with optional “remember me”. Access is limited to users listed in `admin_users`. Open admin sessions stay in sync over Realtime.
 - **KPIs** — confirmed headcount, adults vs children, pending replies, dietary totals.
 - **Guest list** — filter by status, edit guest details (name, phone, group, RSVP, counts, dietary) in a dialog, delete guests.
 - **Add a guest** and send their invite via **WhatsApp**, **SMS**, or copied link.

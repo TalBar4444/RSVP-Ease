@@ -27,6 +27,8 @@ export default function GuestEditDialog({
     deleteError,
     showConfirm,
     setShowConfirm,
+    remoteChanged,
+    remoteChangedMessage,
     busy,
     countsLocked,
     dialogRef,
@@ -35,6 +37,7 @@ export default function GuestEditDialog({
     handleSave,
     handleDelete,
     handleCloseConfirm,
+    handleReloadFromRemote,
   } = useGuestEditDialog({ guest, onClose, onUpdated, onDeleted });
 
   useDialogFocusTrap({
@@ -86,6 +89,23 @@ export default function GuestEditDialog({
                 <IconClose />
               </button>
             </header>
+
+            {remoteChanged ? (
+              <div
+                role="status"
+                className="flex items-start justify-between gap-3 border-b border-amber-200 bg-amber-50 px-5 py-3"
+              >
+                <p className="text-sm font-medium text-amber-900">{remoteChangedMessage}</p>
+                <button
+                  type="button"
+                  onClick={handleReloadFromRemote}
+                  disabled={busy}
+                  className="shrink-0 rounded-lg border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 transition-colors hover:bg-amber-100 disabled:opacity-60"
+                >
+                  טען מחדש
+                </button>
+              </div>
+            ) : null}
 
             <GuestEditForm
               draft={draft}
