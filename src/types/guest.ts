@@ -1,3 +1,5 @@
+export const MAX_DIETARY_NOTES_LENGTH = 100;
+
 export type GuestStatus = 'pending' | 'attending' | 'declined';
 
 export function isGuestStatus(value: unknown): value is GuestStatus {

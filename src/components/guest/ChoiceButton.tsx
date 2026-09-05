@@ -26,14 +26,14 @@ export default function ChoiceButton({
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={`flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 text-[0.95rem] font-normal transition-all duration-200 active:scale-[0.98] ${
+      className={`flex min-h-11 items-center justify-center gap-1 rounded-lg px-1.5 text-[0.95rem] font-normal whitespace-nowrap transition-all duration-200 active:scale-[0.98] ${
         selected ? selectedClass : 'border border-[#C5A059]/80 bg-[#FBF8F2]/80 text-[#082D58] hover:bg-white'
       } ${className}`}
     >
       {selected ? (
-        <IconCheck className={`h-[1.15rem] w-[1.15rem] ${tone === 'navy' ? 'text-[#D3AE62]' : 'text-white'}`} />
+        <IconCheck className={`h-4 w-4 shrink-0 ${tone === 'navy' ? 'text-[#D3AE62]' : 'text-white'}`} />
       ) : null}
-      {children}
+      <span className="whitespace-nowrap">{children}</span>
     </button>
   );
 }

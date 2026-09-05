@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { deleteGuest } from '../../lib/adminGuests';
 import { getGuestMessage } from '../../lib/guestInvites';
 import {
   DEFAULT_MESSAGE_TYPE,
@@ -9,17 +8,14 @@ import {
   type MessageType,
 } from '../../lib/messageTemplates';
 import type { Guest, GuestStatus } from '../../types/guest';
-import ConfirmDialog from './ConfirmDialog';
-import EditableGroupCell from './EditableGroupCell';
+import { IconPencil } from './AdminIcons';
+import DietaryBadges from './DietaryBadges';
+import GuestEditDialog from './guestEdit/GuestEditDialog';
+import { STATUS_LABELS, STATUS_STYLES } from './guestStatus';
 import InviteActions from './InviteActions';
+import StatusBadge from './StatusBadge';
 
 type StatusFilter = 'all' | GuestStatus;
-
-const STATUS_LABELS: Record<GuestStatus, string> = {
-  attending: 'מגיע',
-  declined: 'לא מגיע',
-  pending: 'ממתין',
-};
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'הכל' },
@@ -28,137 +24,20 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'pending', label: STATUS_LABELS.pending },
 ];
 
-const STATUS_STYLES: Record<GuestStatus, string> = {
-  attending: 'border-[#082D58] bg-[#082D58] text-white',
-  declined: 'border-[#C5A059]/70 bg-white/60 text-[#082D58]',
-  pending: 'border-[#C5A059] bg-[#C5A059]/15 text-[#8A6A2E]',
-};
-
-function StatusBadge({ status }: { status: GuestStatus }) {
-  return (
-    <span
-      className={`inline-flex rounded-full border px-2.5 py-0.5 text-xs font-medium ${STATUS_STYLES[status]}`}
-    >
-      {STATUS_LABELS[status]}
-    </span>
-  );
-}
-
-function DietaryBadges({ guest }: { guest: Guest }) {
-  const badges: string[] = [];
-
-  if (guest.is_vegetarian) badges.push('צמחוני');
-  if (guest.is_vegan) badges.push('טבעוני');
-  if (guest.is_gluten_free) badges.push('ללא גלוטן');
-
-  if (badges.length === 0 && !guest.other_dietary_notes) {
-    return <span className="text-sm text-[#9AA6B8]">—</span>;
-  }
-
-  return (
-    <div className="flex flex-col gap-1">
-      {badges.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
-          {badges.map((label) => (
-            <span
-              key={label}
-              className="inline-flex rounded-md border border-[#C5A059]/80 bg-[#C5A059] px-2 py-0.5 text-xs font-medium text-white"
-            >
-              {label}
-            </span>
-          ))}
-        </div>
-      ) : null}
-      {guest.other_dietary_notes ? (
-        <p className="max-w-[16rem] text-xs leading-relaxed text-[#6F7C91]">{guest.other_dietary_notes}</p>
-      ) : null}
-    </div>
-  );
-}
-
-function DeleteGuestButton({
-  guest,
-  onDeleted,
-}: {
-  guest: Guest;
-  onDeleted: (guestId: string) => void;
-}) {
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
-
-  useEffect(() => {
-    return () => {
-      requestIdRef.current += 1;
-    };
-  }, []);
-
-  const handleDelete = async () => {
-    const requestId = ++requestIdRef.current;
-    setDeleting(true);
-    setDeleteError(null);
-
-    try {
-      await deleteGuest(guest.id);
-      if (requestId !== requestIdRef.current) return;
-      setShowConfirm(false);
-      onDeleted(guest.id);
-    } catch (err) {
-      console.error(err);
-      if (requestId !== requestIdRef.current) return;
-      setDeleteError('לא ניתן להסיר את האורח. נסו שוב בעוד רגע.');
-    } finally {
-      if (requestId === requestIdRef.current) setDeleting(false);
-    }
-  };
-
-  const handleClose = () => {
-    if (deleting) return;
-    setShowConfirm(false);
-    setDeleteError(null);
-  };
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={() => setShowConfirm(true)}
-        disabled={deleting}
-        aria-label={`הסר את ${guest.name}`}
-        className="rounded-lg border border-rose-300/80 bg-rose-50 px-2.5 py-1 text-xs font-medium text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-60"
-      >
-        הסר
-      </button>
-
-      <ConfirmDialog
-        open={showConfirm}
-        message={`אתה בטוח שאתה רוצה למחוק את ${guest.name}?`}
-        confirmLabel="מחק"
-        cancelLabel="ביטול"
-        loading={deleting}
-        loadingLabel="מוחק..."
-        error={deleteError}
-        onConfirm={() => void handleDelete()}
-        onCancel={handleClose}
-      />
-    </>
-  );
-}
-
 export default function GuestList({
   guests,
-  onGroupUpdated,
+  onGuestUpdated,
   onDeleted,
 }: {
   guests: Guest[];
-  onGroupUpdated: (guestId: string, groupAffiliation: string | null) => void;
+  onGuestUpdated: (guest: Guest) => void;
   onDeleted: (guestId: string) => void;
 }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [messageType, setMessageType] = useState<MessageType>(DEFAULT_MESSAGE_TYPE);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const selectedTemplate = getMessageTemplate(messageType);
@@ -199,6 +78,19 @@ export default function GuestList({
   }, [guests, searchQuery, statusFilter]);
 
   const hasActiveFilters = Boolean(searchQuery.trim()) || statusFilter !== 'all';
+
+  const groupOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const guest of guests) {
+      const value = guest.group_affiliation?.trim();
+      if (value) names.add(value);
+    }
+    return [...names].sort((a, b) => a.localeCompare(b, 'he'));
+  }, [guests]);
+
+  const selectedGuest = selectedGuestId
+    ? (guests.find((guest) => guest.id === selectedGuestId) ?? null)
+    : null;
 
   return (
     <section className="rounded-2xl border border-[#E6DCCB] bg-white/55 shadow-[0_8px_24px_rgba(8,45,88,0.04)]">
@@ -277,7 +169,7 @@ export default function GuestList({
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setStatusFilter(filter.value)}
-                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                     selected
                       ? filter.value === 'all'
                         ? 'border-[#082D58] bg-[#082D58] text-white'
@@ -300,13 +192,13 @@ export default function GuestList({
               <tr className="border-b border-[#E6DCCB] bg-[#FBF8F2]/80">
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">שם המוזמן</th>
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">נייד</th>
-                <th className="px-5 py-3 font-medium text-[#6F7C91]">שיוך לקבוצה</th>
-                <th className="px-5 py-3 font-medium text-[#6F7C91]">סטטוס</th>
+                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">שיוך לקבוצה</th>
+                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">סטטוס</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">מבוגרים</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">ילדים</th>
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">תזונה</th>
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">שליחה</th>
-                <th className="px-5 py-3 font-medium text-[#6F7C91]">הסרה</th>
+                <th className="px-5 py-3 font-medium text-[#6F7C91]">עריכה</th>
               </tr>
             </thead>
             <tbody>
@@ -318,15 +210,13 @@ export default function GuestList({
                 </tr>
               ) : (
                 filteredGuests.map((guest) => (
-                  <tr key={guest.id} className="border-b border-[#E6DCCB]/70 transition-colors hover:bg-[#FBF8F2]/80">
+                  <tr key={guest.id} className="border-b border-[#E6DCCB]/70">
                     <td className="px-5 py-3 font-medium">{guest.name}</td>
                     <td className="px-5 py-3 text-[#6F7C91]" dir="ltr">
                       {guest.phone ?? '—'}
                     </td>
-                    <td className="px-5 py-3">
-                      <EditableGroupCell guest={guest} onUpdated={onGroupUpdated} />
-                    </td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 text-center text-[#6F7C91]">{guest.group_affiliation ?? '—'}</td>
+                    <td className="px-5 py-3 text-center">
                       <StatusBadge status={guest.status} />
                     </td>
                     <td className="px-5 py-3 text-center">{guest.guests_count}</td>
@@ -338,7 +228,15 @@ export default function GuestList({
                       <InviteActions guest={guest} messageType={messageType} />
                     </td>
                     <td className="px-5 py-3">
-                      <DeleteGuestButton guest={guest} onDeleted={onDeleted} />
+                      <button
+                        type="button"
+                        onClick={() => setSelectedGuestId(guest.id)}
+                        aria-label={`עריכת ${guest.name}`}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#C5A059]/80 bg-white px-2.5 py-1.5 text-xs font-medium text-[#082D58] transition-colors hover:bg-[#FBF8F2]"
+                      >
+                        <IconPencil />
+                        עריכה
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -351,6 +249,20 @@ export default function GuestList({
           מציג {filteredGuests.length} מתוך {guests.length} אורחים
         </div>
       </div>
+
+      {selectedGuest ? (
+        <GuestEditDialog
+          key={selectedGuest.id}
+          guest={selectedGuest}
+          groupOptions={groupOptions}
+          onClose={() => setSelectedGuestId(null)}
+          onUpdated={onGuestUpdated}
+          onDeleted={(guestId) => {
+            onDeleted(guestId);
+            setSelectedGuestId(null);
+          }}
+        />
+      ) : null}
     </section>
   );
 }

@@ -14,7 +14,7 @@ Built with React, TypeScript, Vite, Tailwind CSS, and Supabase.
 ### Admin (`/admin`)
 - **Email/password login** (Supabase Auth) with optional “remember me”. Access is limited to users listed in `admin_users`.
 - **KPIs** — confirmed headcount, adults vs children, pending replies, dietary totals.
-- **Guest list** — filter by status, edit group affiliation, delete guests.
+- **Guest list** — filter by status, edit guest details (name, phone, group, RSVP, counts, dietary) in a dialog, delete guests.
 - **Add a guest** and send their invite via **WhatsApp**, **SMS**, or copied link.
 
 ### Platform
@@ -40,8 +40,9 @@ RSVP-Ease/
 ├── scripts/import-guests.ts    # Excel → Supabase (service role)
 ├── src/
 │   ├── components/
-│   │   ├── admin/              # Login, dashboard, list, invites
+│   │   ├── admin/              # Login, dashboard, guest list, edit dialog, invites
 │   │   └── guest/              # RSVP form and wedding chrome
+│   ├── hooks/                  # Shared UI hooks (dialog focus trap)
 │   ├── lib/                    # Supabase client, RPCs, invites, KPIs
 │   ├── pages/                  # Home
 │   ├── theme/                  # Colors, date, venue
