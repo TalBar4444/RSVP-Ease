@@ -192,8 +192,8 @@ export default function GuestList({
               <tr className="border-b border-[#E6DCCB] bg-[#FBF8F2]/80">
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">שם המוזמן</th>
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">נייד</th>
-                <th className="px-5 py-3 font-medium text-[#6F7C91]">שיוך לקבוצה</th>
-                <th className="px-5 py-3 font-medium text-[#6F7C91]">סטטוס</th>
+                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">שיוך לקבוצה</th>
+                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">סטטוס</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">מבוגרים</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">ילדים</th>
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">תזונה</th>
@@ -215,8 +215,8 @@ export default function GuestList({
                     <td className="px-5 py-3 text-[#6F7C91]" dir="ltr">
                       {guest.phone ?? '—'}
                     </td>
-                    <td className="px-5 py-3 text-[#6F7C91]">{guest.group_affiliation ?? '—'}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 text-center text-[#6F7C91]">{guest.group_affiliation ?? '—'}</td>
+                    <td className="px-5 py-3 text-center">
                       <StatusBadge status={guest.status} />
                     </td>
                     <td className="px-5 py-3 text-center">{guest.guests_count}</td>

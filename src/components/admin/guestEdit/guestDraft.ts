@@ -1,6 +1,6 @@
 import type { GuestUpdateInput } from '../../../lib/adminGuests';
 import { toWhatsAppNumber } from '../../../lib/guestInvites';
-import { isGuestStatus, type Guest, type GuestStatus } from '../../../types/guest';
+import { isGuestStatus, MAX_DIETARY_NOTES_LENGTH, type Guest, type GuestStatus } from '../../../types/guest';
 
 export const MAX_PARTY_COUNT = 50;
 export const NEW_GROUP_VALUE = '__new_group__';
@@ -33,7 +33,7 @@ export function guestToDraft(guest: Guest): GuestDraft {
     isVegetarian: guest.is_vegetarian,
     isVegan: guest.is_vegan,
     isGlutenFree: guest.is_gluten_free,
-    otherDietaryNotes: guest.other_dietary_notes ?? '',
+    otherDietaryNotes: (guest.other_dietary_notes ?? '').slice(0, MAX_DIETARY_NOTES_LENGTH),
   };
 }
 
@@ -80,7 +80,7 @@ export function validateGuestDraft(draft: GuestDraft): GuestDraftValidation {
   let isVegetarian = draft.isVegetarian;
   let isVegan = draft.isVegan;
   let isGlutenFree = draft.isGlutenFree;
-  let otherDietaryNotes = draft.otherDietaryNotes.trim() || null;
+  let otherDietaryNotes = draft.otherDietaryNotes.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null;
 
   if (draft.status === 'declined') {
     guestsCount = 0;

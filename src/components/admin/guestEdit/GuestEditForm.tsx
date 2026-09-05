@@ -2,6 +2,7 @@ import { useEffect, useRef, type Dispatch, type ReactNode, type SetStateAction }
 import FormField, { adminInputClassName } from '../FormField';
 import { DIET_LABELS } from '../guestDiet';
 import { GUEST_STATUSES, STATUS_LABELS, STATUS_STYLES } from '../guestStatus';
+import { MAX_DIETARY_NOTES_LENGTH } from '../../../types/guest';
 import { MAX_PARTY_COUNT, NEW_GROUP_VALUE, parseCount, type GuestDraft } from './guestDraft';
 
 function ChoiceChip({
@@ -259,10 +260,16 @@ export default function GuestEditForm({
               rows={2}
               value={draft.otherDietaryNotes}
               disabled={saving}
-              onChange={(event) => patchDraft({ otherDietaryNotes: event.target.value })}
+              onChange={(event) =>
+                patchDraft({ otherDietaryNotes: event.target.value.slice(0, MAX_DIETARY_NOTES_LENGTH) })
+              }
+              maxLength={MAX_DIETARY_NOTES_LENGTH}
               placeholder="אלרגיות או בקשות מיוחדות"
               className={`${adminInputClassName} resize-none`}
             />
+            <p className="mt-1 text-left text-xs text-[#9AA6B8]" dir="ltr">
+              {draft.otherDietaryNotes.length}/{MAX_DIETARY_NOTES_LENGTH}
+            </p>
           </FormField>
         </>
       ) : null}

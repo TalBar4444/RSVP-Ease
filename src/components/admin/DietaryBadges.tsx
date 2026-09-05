@@ -23,7 +23,7 @@ export default function DietaryBadges({ guest }: { guest: Guest }) {
           {labels.map((label) => (
             <span
               key={label}
-              className="inline-flex rounded-md border border-[#C5A059]/80 bg-[#C5A059] px-2 py-0.5 text-xs font-medium text-white"
+              className="inline-flex whitespace-nowrap rounded-md border border-[#C5A059]/80 bg-[#C5A059] px-2 py-0.5 text-xs font-medium text-white"
             >
               {label}
             </span>

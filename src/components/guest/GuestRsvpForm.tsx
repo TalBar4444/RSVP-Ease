@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchGuestRsvp, submitGuestRsvp } from '../../lib/guestRsvp';
 import { wedding } from '../../theme/wedding';
-import type { GuestRsvp, GuestStatus } from '../../types/guest';
+import { MAX_DIETARY_NOTES_LENGTH, type GuestRsvp, type GuestStatus } from '../../types/guest';
 import ChoiceButton from './ChoiceButton';
 import GuestShell from './GuestShell';
 import { IconChild, IconPeople, IconPlane, IconQuestion, IconWheat } from './icons';
 import Stepper from './Stepper';
+import ThankYouDetails from './ThankYouDetails';
 import WeddingHeader from './WeddingHeader';
 
 const previewGuest: GuestRsvp = {
@@ -29,6 +30,7 @@ export default function GuestRsvpForm() {
   const [error, setError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [editing, setEditing] = useState(false);
   const guestIdRef = useRef(guestId);
   const submitIdRef = useRef(0);
 
@@ -51,6 +53,7 @@ export default function GuestRsvpForm() {
       setError(null);
       setSubmitError(null);
       setSuccess(false);
+      setEditing(false);
       setGuest(null);
 
       try {
@@ -83,7 +86,7 @@ export default function GuestRsvpForm() {
           setIsVegetarian(fetchedGuest.is_vegetarian);
           setIsVegan(fetchedGuest.is_vegan);
           setIsGlutenFree(fetchedGuest.is_gluten_free);
-          setOtherDietary(fetchedGuest.other_dietary_notes || '');
+          setOtherDietary((fetchedGuest.other_dietary_notes || '').slice(0, MAX_DIETARY_NOTES_LENGTH));
           if (fetchedGuest.other_dietary_notes) setShowOtherText(true);
         } else {
           setError('אורח לא נמצא במערכת.');
@@ -110,6 +113,20 @@ export default function GuestRsvpForm() {
     if (status !== 'attending' && status !== 'declined') return;
 
     if (import.meta.env.DEV && guest.id === previewGuest.id) {
+      setGuest({
+        ...guest,
+        status,
+        guests_count: status === 'attending' ? guestsCount : 0,
+        children_count: status === 'attending' ? childrenCount : 0,
+        is_vegetarian: status === 'attending' && isVegetarian,
+        is_vegan: status === 'attending' && isVegan,
+        is_gluten_free: status === 'attending' && isGlutenFree,
+        other_dietary_notes:
+          status === 'attending' && showOtherText
+            ? otherDietary.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null
+            : null,
+      });
+      setEditing(false);
       setSuccess(true);
       return;
     }
@@ -129,9 +146,22 @@ export default function GuestRsvpForm() {
         isVegetarian: isAttending && isVegetarian,
         isVegan: isAttending && isVegan,
         isGlutenFree: isAttending && isGlutenFree,
-        otherDietaryNotes: isAttending && showOtherText ? otherDietary : null,
+        otherDietaryNotes:
+          isAttending && showOtherText ? otherDietary.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null : null,
       });
       if (submitId !== submitIdRef.current || guestIdRef.current !== submittedGuestId) return;
+      setGuest({
+        ...guest,
+        status,
+        guests_count: isAttending ? guestsCount : 0,
+        children_count: isAttending ? childrenCount : 0,
+        is_vegetarian: isAttending && isVegetarian,
+        is_vegan: isAttending && isVegan,
+        is_gluten_free: isAttending && isGlutenFree,
+        other_dietary_notes:
+          isAttending && showOtherText ? otherDietary.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null : null,
+      });
+      setEditing(false);
       setSuccess(true);
     } catch (err) {
       console.error(err);
@@ -140,6 +170,12 @@ export default function GuestRsvpForm() {
     } finally {
       if (submitId === submitIdRef.current) setSubmitting(false);
     }
+  };
+
+  const handleChangeResponse = () => {
+    setSuccess(false);
+    setSubmitError(null);
+    setEditing(true);
   };
 
   if (loading) {
@@ -160,17 +196,43 @@ export default function GuestRsvpForm() {
     );
   }
 
-  if (success) {
+  const alreadyResponded = guest !== null && (guest.status === 'attending' || guest.status === 'declined');
+  const showThankYou = guest !== null && (success || (alreadyResponded && !editing));
+
+  if (showThankYou && guest && (status === 'attending' || status === 'declined')) {
+    const isAttending = status === 'attending';
     return (
       <GuestShell>
         <WeddingHeader />
         <div className="text-center">
           <h2 className="mb-2 font-display text-2xl font-semibold">תודה רבה</h2>
-          <p className="leading-relaxed text-[#6B778C]">התשובה שלך נשמרה במערכת ועודכנה בהצלחה.</p>
-          <p className="mt-3 font-medium" style={{ color: status === 'attending' ? wedding.gold : wedding.muted }}>
-            {status === 'attending' ? 'נתראה בשמחה שלנו' : 'נתגעגע אליכם, תודה שעדכנתם.'}
+          <p className="leading-relaxed text-[#6B778C]">
+            {success ? 'התשובה שלך נשמרה במערכת ועודכנה בהצלחה.' : 'כבר עדכנתם את פרטי ההגעה.'}
+          </p>
+          <p className="mt-3 font-medium" style={{ color: isAttending ? wedding.gold : wedding.muted }}>
+            {isAttending ? 'נתראה בשמחה שלנו' : 'תחסרו לנו, תודה שעדכנתם.'}
           </p>
         </div>
+        <ThankYouDetails
+          name={guest.name}
+          status={status}
+          guestsCount={isAttending ? guestsCount : 0}
+          childrenCount={isAttending ? childrenCount : 0}
+          isVegetarian={isAttending && isVegetarian}
+          isVegan={isAttending && isVegan}
+          isGlutenFree={isAttending && isGlutenFree}
+          otherDietary={isAttending && showOtherText ? otherDietary : ''}
+        />
+        <button
+          type="button"
+          onClick={handleChangeResponse}
+          className="relative mt-[1.45rem] flex min-h-[3.9rem] w-full items-center justify-center rounded-lg bg-[#082D58] text-[1.15rem] font-medium text-white shadow-[0_7px_18px_rgba(8,45,88,0.13)] transition-all active:scale-[0.99]"
+        >
+          לעדכון הגעה
+          <span className="absolute left-5 top-1/2 -translate-y-1/2" aria-hidden="true">
+            <IconPlane />
+          </span>
+        </button>
       </GuestShell>
     );
   }
@@ -255,15 +317,21 @@ export default function GuestRsvpForm() {
               </label>
 
               {showOtherText && (
-                <textarea
-                  id="other-dietary"
-                  value={otherDietary}
-                  onChange={(e) => setOtherDietary(e.target.value)}
-                  aria-label="פירוט אלרגיות או בקשות מיוחדות"
-                  placeholder="פירוט אלרגיות או בקשות מיוחדות..."
-                  rows={2}
-                  className="mt-2 w-full resize-none rounded-lg border border-[#C5A059] bg-white/75 p-3 text-base text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/20"
-                />
+                <div className="mt-2">
+                  <textarea
+                    id="other-dietary"
+                    value={otherDietary}
+                    onChange={(e) => setOtherDietary(e.target.value.slice(0, MAX_DIETARY_NOTES_LENGTH))}
+                    maxLength={MAX_DIETARY_NOTES_LENGTH}
+                    aria-label="פירוט אלרגיות או בקשות מיוחדות"
+                    placeholder="פירוט אלרגיות או בקשות מיוחדות..."
+                    rows={2}
+                    className="w-full resize-none rounded-lg border border-[#C5A059] bg-white/75 p-3 text-base text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/20"
+                  />
+                  <p className="mt-1 text-left text-xs text-[#9AA6B8]" dir="ltr">
+                    {otherDietary.length}/{MAX_DIETARY_NOTES_LENGTH}
+                  </p>
+                </div>
               )}
             </section>
           </div>
