@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { deleteGuest, updateGuest } from '../../../lib/adminGuests';
+import { deleteGuest, isGuestUpdateConflictError, updateGuest } from '../../../lib/adminGuests';
 import type { Guest } from '../../../types/guest';
-import { guestToDraft, validateGuestDraft, type GuestDraft } from './guestDraft';
+import { guestDraftsEqual, guestToDraft, validateGuestDraft, type GuestDraft } from './guestDraft';
+
+const REMOTE_UPDATE_MESSAGE = 'האורח עודכן במקום אחר.';
 
 export function useGuestEditDialog({
   guest,
@@ -20,10 +22,13 @@ export function useGuestEditDialog({
   const [showConfirm, setShowConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [remoteChanged, setRemoteChanged] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   const requestIdRef = useRef(0);
   const mutationInFlightRef = useRef(false);
+  const casUpdatedAtRef = useRef(guest.updated_at);
+  const baselineDraftRef = useRef(guestToDraft(guest));
   const busy = saving || deleting;
   const countsLocked = draft.status === 'declined';
 
@@ -44,6 +49,33 @@ export function useGuestEditDialog({
     };
   }, []);
 
+  useEffect(() => {
+    if (guest.updated_at === casUpdatedAtRef.current) return;
+
+    if (guestDraftsEqual(draft, baselineDraftRef.current)) {
+      const nextDraft = guestToDraft(guest);
+      casUpdatedAtRef.current = guest.updated_at;
+      baselineDraftRef.current = nextDraft;
+      setDraft(nextDraft);
+      setRemoteChanged(false);
+      return;
+    }
+
+    setRemoteChanged(true);
+  }, [draft, guest]);
+
+  const applyRemoteGuest = useCallback(
+    (nextGuest: Guest) => {
+      const nextDraft = guestToDraft(nextGuest);
+      casUpdatedAtRef.current = nextGuest.updated_at;
+      baselineDraftRef.current = nextDraft;
+      setDraft(nextDraft);
+      setRemoteChanged(false);
+      setFormError(null);
+    },
+    [],
+  );
+
   const closeDialog = useCallback(() => {
     if (busy) return;
     onCloseRef.current();
@@ -52,6 +84,10 @@ export function useGuestEditDialog({
   const handleBackdropClick = () => {
     if (showConfirm) return;
     closeDialog();
+  };
+
+  const handleReloadFromRemote = () => {
+    applyRemoteGuest(guest);
   };
 
   const handleSave = async () => {
@@ -69,13 +105,18 @@ export function useGuestEditDialog({
     setFormError(null);
 
     try {
-      const updated = await updateGuest(guest.id, result.input);
+      const updated = await updateGuest(guest.id, result.input, casUpdatedAtRef.current);
       if (requestId !== requestIdRef.current) return;
       onUpdated(updated);
       onCloseRef.current();
     } catch (err) {
       console.error(err);
       if (requestId !== requestIdRef.current) return;
+      if (isGuestUpdateConflictError(err)) {
+        onUpdated(err.current);
+        setRemoteChanged(true);
+        return;
+      }
       setFormError('לא ניתן לשמור את פרטי האורח. נסו שוב בעוד רגע.');
     } finally {
       if (requestId === requestIdRef.current) {
@@ -125,6 +166,8 @@ export function useGuestEditDialog({
     deleteError,
     showConfirm,
     setShowConfirm,
+    remoteChanged,
+    remoteChangedMessage: REMOTE_UPDATE_MESSAGE,
     busy,
     countsLocked,
     dialogRef,
@@ -133,5 +176,6 @@ export function useGuestEditDialog({
     handleSave,
     handleDelete,
     handleCloseConfirm,
+    handleReloadFromRemote,
   };
 }

@@ -19,10 +19,11 @@ export interface Guest {
   is_vegan: boolean;
   is_gluten_free: boolean;
   other_dietary_notes: string | null;
+  updated_at: string;
 }
 
-/** Public RSVP payload: no phone or group affiliation. */
-export type GuestRsvp = Omit<Guest, 'phone' | 'group_affiliation'>;
+/** Public RSVP payload: no phone, group affiliation, or timestamps. */
+export type GuestRsvp = Omit<Guest, 'phone' | 'group_affiliation' | 'updated_at'>;
 
 export interface GuestKpiMetrics {
   totalConfirmed: number;
