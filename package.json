@@ -15,7 +15,9 @@
     "security": "npm run security:audit && npm run security:snyk",
     "db:reset": "npx supabase db reset --local",
     "db:test": "npx supabase test db",
-    "db:lint": "npx supabase db lint"
+    "db:lint": "npx supabase db lint",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.1",
@@ -25,6 +27,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.3.0",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",

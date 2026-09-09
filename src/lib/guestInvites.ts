@@ -5,6 +5,11 @@ export type { MessageType };
 function getPublicSiteOrigin(): string {
   const configured = import.meta.env.VITE_PUBLIC_SITE_URL?.trim().replace(/\/$/, '');
   if (configured) return configured;
+  if (import.meta.env.PROD) {
+    throw new Error(
+      'VITE_PUBLIC_SITE_URL must be set in production so invite links never use a preview or localhost origin.',
+    );
+  }
   return window.location.origin;
 }
 

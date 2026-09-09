@@ -106,7 +106,6 @@ export default function AdminDashboard() {
           <div className="text-center sm:text-start">
             <p className="text-sm text-[#6F7C91]">החתונה של {wedding.coupleShort}</p>
             <h1 className="mt-1 text-3xl font-medium">לוח ניהול RSVP</h1>
-            <p className="mt-1 text-[#6F7C91]">סקירת אורחים, אישורים והעדפות קולינריות</p>
           </div>
           <div className="flex flex-col items-center gap-3 sm:items-end">
             <img src="/logo-cropped.png" alt="" className="h-[4.5rem] w-auto object-contain" />

@@ -1,8 +1,14 @@
 import type { GuestUpdateInput } from '../../../lib/adminGuests';
 import { toWhatsAppNumber } from '../../../lib/guestInvites';
-import { isGuestStatus, MAX_DIETARY_NOTES_LENGTH, type Guest, type GuestStatus } from '../../../types/guest';
+import {
+  isGuestStatus,
+  MAX_DIETARY_NOTES_LENGTH,
+  MAX_PARTY_COUNT,
+  type Guest,
+  type GuestStatus,
+} from '../../../types/guest';
 
-export const MAX_PARTY_COUNT = 50;
+export { MAX_PARTY_COUNT };
 export const NEW_GROUP_VALUE = '__new_group__';
 
 export type GuestDraft = {

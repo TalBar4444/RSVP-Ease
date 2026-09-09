@@ -72,13 +72,10 @@ export default function GuestEditDialog({
               void handleSave();
             }}
           >
-            <header className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b border-[#E6DCCB] bg-white px-5 py-4">
-              <div className="min-w-0">
-                <p className="text-xs text-[#9AA6B8]">עריכת אורח</p>
-                <h3 id="guest-edit-title" className="mt-1 truncate text-lg font-medium text-[#082D58]">
-                  {draft.name || guest.name}
-                </h3>
-              </div>
+            <header className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-[#E6DCCB] bg-white px-5 py-4">
+              <h3 id="guest-edit-title" className="text-lg font-medium text-[#082D58]">
+                עריכת אורח
+              </h3>
               <button
                 type="button"
                 onClick={closeDialog}
@@ -116,32 +113,33 @@ export default function GuestEditDialog({
               onDraftChange={setDraft}
             />
 
-            <div className="sticky bottom-0 z-10 flex items-center justify-between gap-3 border-t border-[#E6DCCB] bg-white px-5 py-3">
-              <div className="flex shrink-0 gap-2">
-                <button
-                  type="button"
-                  onClick={closeDialog}
-                  disabled={saving}
-                  className="whitespace-nowrap rounded-lg border border-[#C5A059]/80 bg-white px-4 py-2.5 text-sm font-medium text-[#082D58] transition-colors hover:bg-[#FBF8F2] disabled:opacity-60"
-                >
-                  ביטול
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="whitespace-nowrap rounded-lg bg-[#082D58] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0b3a70] disabled:opacity-60"
-                >
-                  {saving ? 'שומר...' : 'שמירה'}
-                </button>
-              </div>
+            <div className="flex justify-center px-5 pb-4">
               <button
                 type="button"
                 onClick={() => setShowConfirm(true)}
                 disabled={busy}
-                className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-lg border border-rose-300 bg-white px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-50 disabled:opacity-60"
+                className="inline-flex items-center gap-1 rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-medium leading-5 text-rose-700 transition-colors hover:bg-rose-100 disabled:opacity-60"
               >
                 <IconTrash />
-                מחיקת אורח
+                מחיקה
+              </button>
+            </div>
+
+            <div className="sticky bottom-0 z-10 flex justify-center gap-2 border-t border-[#E6DCCB] bg-white px-5 py-3">
+              <button
+                type="button"
+                onClick={closeDialog}
+                disabled={saving}
+                className="rounded-lg border border-[#C5A059]/80 bg-white px-5 py-2.5 text-sm font-medium text-[#082D58] transition-colors hover:bg-[#FBF8F2] disabled:opacity-60"
+              >
+                ביטול
+              </button>
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-lg bg-[#082D58] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0b3a70] disabled:opacity-60"
+              >
+                {saving ? 'שומר...' : 'שמירה'}
               </button>
             </div>
           </form>

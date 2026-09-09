@@ -8,7 +8,6 @@ import {
   type MessageType,
 } from '../../lib/messageTemplates';
 import type { Guest, GuestStatus } from '../../types/guest';
-import { IconPencil } from './AdminIcons';
 import DietaryBadges from './DietaryBadges';
 import GuestEditDialog from './guestEdit/GuestEditDialog';
 import { STATUS_LABELS, STATUS_STYLES } from './guestStatus';
@@ -108,7 +107,7 @@ export default function GuestList({
                 if (isMessageType(e.target.value)) setMessageType(e.target.value);
               }}
               title={selectedTemplate.hint}
-              className="max-w-[11rem] rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-2.5 py-1.5 text-xs font-medium text-[#082D58] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25"
+              className="admin-select-chevron max-w-[11rem] rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] py-1.5 ps-2.5 pe-6 text-xs font-medium text-[#082D58] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25"
             >
               {MESSAGE_TYPE_LIST.map((template) => (
                 <option key={template.id} value={template.id}>
@@ -196,21 +195,24 @@ export default function GuestList({
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">סטטוס</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">מבוגרים</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">ילדים</th>
-                <th className="px-5 py-3 font-medium text-[#6F7C91]">תזונה</th>
+                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">תזונה</th>
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">שליחה</th>
-                <th className="px-5 py-3 font-medium text-[#6F7C91]">עריכה</th>
               </tr>
             </thead>
             <tbody>
               {filteredGuests.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-8 text-center text-[#9AA6B8]">
+                  <td colSpan={8} className="px-5 py-8 text-center text-[#9AA6B8]">
                     {hasActiveFilters ? 'לא נמצאו אורחים תואמים לסינון.' : 'עדיין אין אורחים ברשימה.'}
                   </td>
                 </tr>
               ) : (
                 filteredGuests.map((guest) => (
-                  <tr key={guest.id} className="border-b border-[#E6DCCB]/70">
+                  <tr
+                    key={guest.id}
+                    className="cursor-pointer border-b border-[#E6DCCB]/70 hover:bg-[#FBF8F2]/80"
+                    onClick={() => setSelectedGuestId(guest.id)}
+                  >
                     <td className="px-5 py-3 font-medium">{guest.name}</td>
                     <td className="px-5 py-3 text-[#6F7C91]" dir="ltr">
                       {guest.phone ?? '—'}
@@ -221,22 +223,14 @@ export default function GuestList({
                     </td>
                     <td className="px-5 py-3 text-center">{guest.guests_count}</td>
                     <td className="px-5 py-3 text-center">{guest.children_count}</td>
-                    <td className="px-5 py-3">
+                    <td className="px-5 py-3 text-center">
                       <DietaryBadges guest={guest} />
                     </td>
-                    <td className="px-5 py-3">
+                    <td
+                      className="px-5 py-3"
+                      onClick={(event) => event.stopPropagation()}
+                    >
                       <InviteActions guest={guest} messageType={messageType} />
-                    </td>
-                    <td className="px-5 py-3">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedGuestId(guest.id)}
-                        aria-label={`עריכת ${guest.name}`}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#C5A059]/80 bg-white px-2.5 py-1.5 text-xs font-medium text-[#082D58] transition-colors hover:bg-[#FBF8F2]"
-                      >
-                        <IconPencil />
-                        עריכה
-                      </button>
                     </td>
                   </tr>
                 ))

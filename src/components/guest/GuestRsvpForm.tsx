@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { fetchGuestRsvp, submitGuestRsvp } from '../../lib/guestRsvp';
 import { wedding } from '../../theme/wedding';
-import { MAX_DIETARY_NOTES_LENGTH, type GuestRsvp, type GuestStatus } from '../../types/guest';
+import { MAX_DIETARY_NOTES_LENGTH, MAX_PARTY_COUNT, type GuestRsvp, type GuestStatus } from '../../types/guest';
 import ChoiceButton from './ChoiceButton';
 import GuestShell from './GuestShell';
 import { IconChild, IconPeople, IconPlane, IconQuestion, IconWheat } from './icons';
@@ -267,8 +267,9 @@ export default function GuestRsvpForm() {
               <Stepper
                 value={guestsCount}
                 min={1}
+                max={MAX_PARTY_COUNT}
                 onDecrease={() => setGuestsCount(Math.max(1, guestsCount - 1))}
-                onIncrease={() => setGuestsCount(guestsCount + 1)}
+                onIncrease={() => setGuestsCount(Math.min(MAX_PARTY_COUNT, guestsCount + 1))}
                 decreaseLabel="הפחתת מבוגרים"
                 increaseLabel="הוספת מבוגרים"
               />
@@ -282,8 +283,9 @@ export default function GuestRsvpForm() {
               <Stepper
                 value={childrenCount}
                 min={0}
+                max={MAX_PARTY_COUNT}
                 onDecrease={() => setChildrenCount(Math.max(0, childrenCount - 1))}
-                onIncrease={() => setChildrenCount(childrenCount + 1)}
+                onIncrease={() => setChildrenCount(Math.min(MAX_PARTY_COUNT, childrenCount + 1))}
                 decreaseLabel="הפחתת ילדים"
                 increaseLabel="הוספת ילדים"
               />

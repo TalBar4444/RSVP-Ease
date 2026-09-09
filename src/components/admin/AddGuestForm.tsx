@@ -63,10 +63,7 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
 
   return (
     <section className="mb-8 rounded-2xl border border-[#E6DCCB] bg-white/55 p-5 shadow-[0_8px_24px_rgba(8,45,88,0.04)]">
-      <h2 className="text-lg font-medium">הוספת אורח</h2>
-      <p className="mb-4 mt-1 text-sm text-[#6F7C91]">
-        הוסיפו שם וטלפון, ואז שלחו את הקישור האישי בוואטסאפ.
-      </p>
+      <h2 className="mb-4 text-lg font-medium">הוספת אורח</h2>
 
       <form onSubmit={(event) => void handleSubmit(event)} className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <div>

@@ -1,0 +1,21 @@
+---
+description: Verify UI, layout, routing, and client-state changes in the in-IDE browser
+alwaysApply: true
+---
+
+# Browser verification
+
+After changing UI, layout, routing, or client-visible state, open the local app and **exercise the affected flow** (click, type, submit, navigate). A screenshot alone is not enough.
+
+1. If nothing is listening on `http://localhost:5173`, start `npm run dev`.
+2. Use the in-IDE browser: lock the tab, interact, unlock when done.
+3. Re-check other routes that share the changed state (e.g. guest edit vs list KPIs).
+4. For layout/styling, check desktop and ~390px wide.
+5. If the browser is unavailable, say what you could not verify.
+
+Routes:
+
+- `/` — home copy
+- `/rsvp/preview` — mock RSVP (Vite DEV only, no database). Prefer this for form checks.
+- `/rsvp/11111111-1111-4111-8111-111111111111` — pending seed fixture on **local or rsvp-db-dev only** (`2222…` / `3333…` may have been edited). These IDs come from `supabase/seed.sql`. Never open them against production.
+- `/admin` — login, then dashboard if a session exists

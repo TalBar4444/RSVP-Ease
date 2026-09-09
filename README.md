@@ -35,7 +35,9 @@ Built with React, TypeScript, Vite, Tailwind CSS, and Supabase.
 
 ```text
 RSVP-Ease/
-├── .github/workflows/ci.yml    # Lint, build, npm/Snyk audit, pgTAP
+├── .github/workflows/ci.yml    # Lint, build, npm/Snyk audit, pgTAP, Playwright
+├── e2e/                        # Playwright smokes (home, RSVP preview, admin login)
+├── playwright.config.ts
 ├── public/                     # Logos
 ├── scripts/import-guests.ts    # Excel → Supabase (service role)
 ├── src/
@@ -61,7 +63,7 @@ RSVP-Ease/
 └── .env.import.example         # Import-script secret env (no VITE_ keys)
 ```
 
-Git-ignored (do not commit): `.env*` except the `*.example` files, `data/guest_list.xlsx` and other spreadsheets under `data/`, `supabase/.temp/` (CLI cache and start secrets), `supabase/.branches/`, `.vercel`, `node_modules`, `dist`, and database dumps (`*.dump`, `/backups/`).
+Git-ignored (do not commit): `.env*` except the `*.example` files, `data/guest_list.xlsx` and other spreadsheets under `data/`, `supabase/.temp/` (CLI cache and start secrets), `supabase/.branches/`, `.vercel`, `node_modules`, `dist`, Playwright `test-results/` / `playwright-report/`, and database dumps (`*.dump`, `/backups/`).
 
 ## ⚙️ Local setup
 
@@ -93,7 +95,7 @@ For the Excel import script only, also set the service role key in the matching 
 SUPABASE_SECRET_KEY=sb_secret_your-key
 ```
 
-Set `VITE_*` on Vercel: **Preview** → dev Supabase; **Production** → prod Supabase. Always set `VITE_PUBLIC_SITE_URL` on Production.
+Set `VITE_*` on Vercel: **Preview** → dev Supabase; **Production** → prod Supabase. Always set `VITE_PUBLIC_SITE_URL` on Production — invite links throw without it in a production build, so WhatsApp/SMS never pick up a preview or localhost origin.
 
 4. **Dev server** — `--host` lets you open the app from a phone on the same network:
 
@@ -108,7 +110,18 @@ npm run dev -- --host
 | `/rsvp/preview` | Dev-only mock form (no database) |
 | `/admin` | Admin dashboard (login required) |
 
-Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm run security` (npm audit + Snyk), `npm run db:reset` / `db:test` / `db:lint` (local Supabase; Docker required).
+Other scripts: `npm run build`, `npm run preview`, `npm run lint`, `npm run security` (npm audit + Snyk), `npm run test:e2e` (Playwright smokes), `npm run db:reset` / `db:test` / `db:lint` (local Supabase; Docker required).
+
+### Browser smokes
+
+Once per machine: `npx playwright install chromium`. Then:
+
+```bash
+npm run test:e2e
+```
+
+The suite starts the Vite **dev** server (so `/rsvp/preview` works) and does not need Supabase. It covers home copy, the mock RSVP flow, and the admin login form. CI runs the same job. Admin dashboard and real guest UUIDs are still checked in the browser when those surfaces change.
+
 
 ## 🗄️ Database access model
 
@@ -208,6 +221,7 @@ Expected columns (Hebrew or English headers): name (`שם המוזמן`), phone 
 - Never put `SUPABASE_SECRET_KEY` (or legacy `SUPABASE_SERVICE_ROLE_KEY`) in any `VITE_` variable.
 - Keep separate Supabase projects for development and production.
 - Guest invite UUIDs are unguessable; they are still secrets — do not publish the full guest list of links.
+- The site sends `noindex, nofollow` and `public/robots.txt` disallows all crawlers so personal `/rsvp/<uuid>` links are less likely to be indexed.
 - Spreadsheets under `data/` contain names and phone numbers and are git-ignored.
 
 ### CI
@@ -216,6 +230,7 @@ GitHub Actions (`.github/workflows/ci.yml`) on `dev` and `main`:
 
 - **lint-and-build** — `npm run lint`, `typecheck`, `build`, `security:audit`, `security:snyk`
 - **database** — `supabase db start`, `supabase test db` (pgTAP), `supabase db lint`, `db advisors` (fails on error, not on INFO)
+- **e2e** — Playwright Chromium smokes (`npm run test:e2e`: home, `/rsvp/preview`, admin login form)
 
 ### Dependency scanning
 

@@ -17,9 +17,9 @@ export default function DietaryBadges({ guest }: { guest: Guest }) {
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col items-center gap-1">
       {labels.length > 0 ? (
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap justify-center gap-1">
           {labels.map((label) => (
             <span
               key={label}
@@ -31,7 +31,9 @@ export default function DietaryBadges({ guest }: { guest: Guest }) {
         </div>
       ) : null}
       {guest.other_dietary_notes ? (
-        <p className="max-w-[16rem] text-xs leading-relaxed text-[#6F7C91]">{guest.other_dietary_notes}</p>
+        <p className="max-w-[16rem] text-center text-xs leading-relaxed text-[#6F7C91]">
+          {guest.other_dietary_notes}
+        </p>
       ) : null}
     </div>
   );

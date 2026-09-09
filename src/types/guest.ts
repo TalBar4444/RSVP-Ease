@@ -1,4 +1,5 @@
 export const MAX_DIETARY_NOTES_LENGTH = 100;
+export const MAX_PARTY_COUNT = 50;
 
 export type GuestStatus = 'pending' | 'attending' | 'declined';
 
