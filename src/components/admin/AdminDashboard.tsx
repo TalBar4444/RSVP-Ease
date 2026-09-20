@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { computeGuestKpis } from '../../lib/guestAnalytics';
 import { wedding } from '../../theme/wedding';
 import AddGuestForm from './AddGuestForm';
+import { DIET_LABELS } from './guestDiet';
 import { useAdminData } from './adminData';
 import AdminLogin from './AdminLogin';
 import AdminShell, { GoldDivider } from './AdminShell';
@@ -162,13 +163,13 @@ export default function AdminDashboard() {
           <p className="text-sm font-medium text-[#6F7C91]">העדפות קולינריות</p>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
             <span>
-              <span className="font-medium">{metrics.vegetarianCount}</span> צמחוני
+              <span className="font-medium">{metrics.vegetarianCount}</span> {DIET_LABELS.vegetarian}
             </span>
             <span>
-              <span className="font-medium">{metrics.veganCount}</span> טבעוני
+              <span className="font-medium">{metrics.veganCount}</span> {DIET_LABELS.vegan}
             </span>
             <span>
-              <span className="font-medium">{metrics.glutenFreeCount}</span> ללא גלוטן
+              <span className="font-medium">{metrics.glutenFreeCount}</span> {DIET_LABELS.glutenFree}
             </span>
           </div>
           <p className="mt-2 text-xs text-[#9AA6B8]">לפי הזמנה, לא לפי מספר סועדים</p>

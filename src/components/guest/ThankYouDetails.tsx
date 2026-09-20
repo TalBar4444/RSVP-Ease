@@ -1,11 +1,6 @@
 import { wedding } from '../../theme/wedding';
 import type { GuestStatus } from '../../types/guest';
-
-const DIET_LABELS = {
-  vegetarian: 'צמחוני',
-  vegan: 'טבעוני',
-  glutenFree: 'ללא גלוטן',
-} as const;
+import { DIET_LABELS } from '../admin/guestDiet';
 
 function DetailRow({
   label,

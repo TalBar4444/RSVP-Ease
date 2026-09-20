@@ -1,0 +1,21 @@
+{
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    ".agents": true,
+    "dist": true,
+    "playwright-report": true,
+    "test-results": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "dist": true,
+    "playwright-report": true,
+    "test-results": true
+  },
+  "explorer.fileNesting.enabled": true,
+  "explorer.fileNesting.expand": false,
+  "explorer.fileNesting.patterns": {
+    "package.json": "package-lock.json, tsconfig.json, tsconfig.*.json, eslint.config.js, vite.config.ts, playwright.config.ts, postcss.config.js, tailwind.config.js, vercel.json, skills-lock.json, .snyk, .env.example, .env.import.example, .gitignore"
+  }
+}

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import { fetchGuestRsvp, submitGuestRsvp } from '../../lib/guestRsvp';
 import { wedding } from '../../theme/wedding';
 import { MAX_DIETARY_NOTES_LENGTH, MAX_PARTY_COUNT, type GuestRsvp, type GuestStatus } from '../../types/guest';
+import { DIET_LABELS } from '../admin/guestDiet';
 import ChoiceButton from './ChoiceButton';
 import GuestShell from './GuestShell';
 import { IconChild, IconPeople, IconPlane, IconQuestion, IconWheat } from './icons';
@@ -298,13 +299,13 @@ export default function GuestRsvpForm() {
               </div>
               <div className="grid grid-cols-3 gap-[0.9rem]">
                 <ChoiceButton selected={isVegetarian} onClick={() => setIsVegetarian(!isVegetarian)} tone="gold">
-                  צמחוני
+                  {DIET_LABELS.vegetarian}
                 </ChoiceButton>
                 <ChoiceButton selected={isVegan} onClick={() => setIsVegan(!isVegan)} tone="gold">
-                  טבעוני
+                  {DIET_LABELS.vegan}
                 </ChoiceButton>
                 <ChoiceButton selected={isGlutenFree} onClick={() => setIsGlutenFree(!isGlutenFree)} tone="gold">
-                  ללא גלוטן
+                  {DIET_LABELS.glutenFree}
                 </ChoiceButton>
               </div>
 
