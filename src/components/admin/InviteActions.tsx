@@ -40,12 +40,15 @@ export default function InviteActions({
     }
   };
 
+  const actionClassName =
+    'inline-flex min-h-11 items-center justify-center rounded-lg px-3 py-2 text-xs font-medium transition-colors lg:min-h-0 lg:px-2.5 lg:py-1';
+
   return (
     <div className="flex flex-wrap gap-2">
       <button
         type="button"
         onClick={() => void handleCopy()}
-        className="rounded-lg border border-[#C5A059]/80 bg-white/70 px-2.5 py-1 text-xs font-medium text-[#082D58] transition-colors hover:bg-white"
+        className={`${actionClassName} border border-[#C5A059]/80 bg-white/70 text-[#082D58] hover:bg-white`}
       >
         {copied ? 'הועתק' : 'העתקת קישור'}
       </button>
@@ -59,7 +62,7 @@ export default function InviteActions({
             event.preventDefault();
             openWhatsAppChat(whatsappUrl);
           }}
-          className="rounded-lg border border-[#082D58] bg-[#082D58] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-[#0b3a70]"
+          className={`${actionClassName} border border-[#082D58] bg-[#082D58] text-white hover:bg-[#0b3a70]`}
         >
           וואטסאפ
         </a>
@@ -67,7 +70,7 @@ export default function InviteActions({
       {smsUrl ? (
         <a
           href={smsUrl}
-          className="rounded-lg border border-[#082D58] bg-[#082D58] px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-[#0b3a70]"
+          className={`${actionClassName} border border-[#082D58] bg-[#082D58] text-white hover:bg-[#0b3a70]`}
         >
           הודעה
         </a>

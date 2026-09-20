@@ -26,7 +26,7 @@ export default function AdminShell({
         className={`relative z-10 mx-auto w-full ${
           compact
             ? 'flex min-h-dvh items-center justify-center px-5 py-10'
-            : 'max-w-6xl px-[clamp(1.1rem,4vw,2.5rem)] py-8 lg:py-12'
+            : 'max-w-6xl px-[clamp(0.9rem,4vw,2.5rem)] py-6 lg:py-12'
         }`}
       >
         {children}

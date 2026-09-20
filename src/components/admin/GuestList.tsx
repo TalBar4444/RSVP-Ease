@@ -9,6 +9,7 @@ import {
 } from '../../lib/messageTemplates';
 import type { Guest, GuestStatus } from '../../types/guest';
 import DietaryBadges from './DietaryBadges';
+import GuestCard from './GuestCard';
 import GuestEditDialog from './guestEdit/GuestEditDialog';
 import { STATUS_LABELS, STATUS_STYLES } from './guestStatus';
 import InviteActions from './InviteActions';
@@ -91,13 +92,17 @@ export default function GuestList({
     ? (guests.find((guest) => guest.id === selectedGuestId) ?? null)
     : null;
 
+  const emptyMessage = hasActiveFilters
+    ? 'לא נמצאו אורחים תואמים לסינון.'
+    : 'עדיין אין אורחים ברשימה.';
+
   return (
     <section className="rounded-2xl border border-[#E6DCCB] bg-white/55 shadow-[0_8px_24px_rgba(8,45,88,0.04)]">
-      <div className="border-b border-[#E6DCCB] p-5">
+      <div className="border-b border-[#E6DCCB] p-4 lg:p-5">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <h2 className="text-lg font-medium">רשימת אורחים</h2>
-          <div className="flex items-center gap-2" ref={previewRef}>
-            <label htmlFor="message-type" className="text-xs font-medium text-[#6F7C91]">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto" ref={previewRef}>
+            <label htmlFor="message-type" className="shrink-0 text-xs font-medium text-[#6F7C91]">
               סוג הודעה
             </label>
             <select
@@ -107,7 +112,7 @@ export default function GuestList({
                 if (isMessageType(e.target.value)) setMessageType(e.target.value);
               }}
               title={selectedTemplate.hint}
-              className="admin-select-chevron max-w-[11rem] rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] py-1.5 ps-2.5 pe-6 text-xs font-medium text-[#082D58] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25"
+              className="admin-select-chevron min-h-11 min-w-0 flex-1 rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] py-1.5 ps-2.5 pe-6 text-xs font-medium text-[#082D58] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25 sm:max-w-[11rem] sm:flex-none lg:min-h-0"
             >
               {MESSAGE_TYPE_LIST.map((template) => (
                 <option key={template.id} value={template.id}>
@@ -115,13 +120,13 @@ export default function GuestList({
                 </option>
               ))}
             </select>
-            <div className="relative">
+            <div className="relative shrink-0">
               <button
                 type="button"
                 aria-expanded={previewOpen}
                 aria-controls="message-preview"
                 onClick={() => setPreviewOpen((open) => !open)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`min-h-11 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors lg:min-h-0 lg:px-2.5 ${
                   previewOpen
                     ? 'border-[#082D58] bg-[#082D58] text-white'
                     : 'border-[#C5A059]/60 bg-white/70 text-[#6F7C91] hover:border-[#C5A059] hover:bg-white'
@@ -168,7 +173,7 @@ export default function GuestList({
                   type="button"
                   aria-pressed={selected}
                   onClick={() => setStatusFilter(filter.value)}
-                  className={`whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`min-h-9 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors lg:min-h-0 ${
                     selected
                       ? filter.value === 'all'
                         ? 'border-[#082D58] bg-[#082D58] text-white'
@@ -185,7 +190,22 @@ export default function GuestList({
       </div>
 
       <div className="overflow-hidden rounded-b-2xl">
-        <div className="overflow-x-auto">
+        <div className="divide-y divide-[#E6DCCB]/70 lg:hidden">
+          {filteredGuests.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-[#9AA6B8]">{emptyMessage}</p>
+          ) : (
+            filteredGuests.map((guest) => (
+              <GuestCard
+                key={guest.id}
+                guest={guest}
+                messageType={messageType}
+                onSelect={() => setSelectedGuestId(guest.id)}
+              />
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto lg:block">
           <table className="w-full text-start text-sm">
             <thead>
               <tr className="border-b border-[#E6DCCB] bg-[#FBF8F2]/80">
@@ -203,7 +223,7 @@ export default function GuestList({
               {filteredGuests.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-5 py-8 text-center text-[#9AA6B8]">
-                    {hasActiveFilters ? 'לא נמצאו אורחים תואמים לסינון.' : 'עדיין אין אורחים ברשימה.'}
+                    {emptyMessage}
                   </td>
                 </tr>
               ) : (

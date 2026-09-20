@@ -62,12 +62,15 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
   };
 
   return (
-    <section className="mb-8 rounded-2xl border border-[#E6DCCB] bg-white/55 p-5 shadow-[0_8px_24px_rgba(8,45,88,0.04)]">
-      <h2 className="mb-4 text-lg font-medium">הוספת אורח</h2>
+    <section className="mb-4 rounded-2xl border border-[#E6DCCB] bg-white/55 p-3 shadow-[0_8px_24px_rgba(8,45,88,0.04)] sm:mb-5 sm:p-5 lg:mb-8">
+      <h2 className="mb-2 text-base font-medium sm:mb-4 sm:text-lg">הוספת אורח</h2>
 
-      <form onSubmit={(event) => void handleSubmit(event)} className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <div>
-          <label htmlFor="guest-name" className="mb-2 block text-sm font-medium">
+      <form
+        onSubmit={(event) => void handleSubmit(event)}
+        className="grid grid-cols-2 items-end gap-2 sm:gap-3 lg:grid-cols-5"
+      >
+        <div className="col-span-2 sm:col-span-1">
+          <label htmlFor="guest-name" className="mb-1 block text-xs font-medium sm:mb-2 sm:text-sm">
             שם המוזמן
           </label>
           <input
@@ -76,12 +79,12 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="שם האורח"
-            className="w-full rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-4 py-2.5 text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25"
+            className="w-full rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-3 py-2 text-sm text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25 sm:px-4 sm:py-2.5 sm:text-base"
           />
         </div>
 
         <div>
-          <label htmlFor="guest-phone" className="mb-2 block text-sm font-medium">
+          <label htmlFor="guest-phone" className="mb-1 block text-xs font-medium sm:mb-2 sm:text-sm">
             נייד
           </label>
           <input
@@ -90,13 +93,13 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0501234567"
-            className="w-full rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-4 py-2.5 text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25"
+            className="w-full rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-3 py-2 text-sm text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25 sm:px-4 sm:py-2.5 sm:text-base"
             dir="ltr"
           />
         </div>
 
         <div>
-          <label htmlFor="guest-group" className="mb-2 block text-sm font-medium">
+          <label htmlFor="guest-group" className="mb-1 block text-xs font-medium sm:mb-2 sm:text-sm">
             שיוך לקבוצה
           </label>
           <input
@@ -105,24 +108,24 @@ export default function AddGuestForm({ onGuestAdded }: { onGuestAdded: (guest: G
             value={groupAffiliation}
             onChange={(e) => setGroupAffiliation(e.target.value)}
             placeholder="משפחה / חברים"
-            className="w-full rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-4 py-2.5 text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25"
+            className="w-full rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-3 py-2 text-sm text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25 sm:px-4 sm:py-2.5 sm:text-base"
           />
         </div>
 
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-lg bg-[#082D58] px-4 py-2.5 font-medium text-white shadow-[0_7px_18px_rgba(8,45,88,0.13)] transition-all active:scale-[0.99] disabled:bg-[#D9CDB8] disabled:text-[#8A93A6] disabled:shadow-none sm:col-span-2 lg:col-span-1"
+          className="col-span-2 min-h-11 rounded-lg bg-[#082D58] px-4 py-2.5 text-sm font-medium text-white shadow-[0_7px_18px_rgba(8,45,88,0.13)] transition-all active:scale-[0.99] disabled:bg-[#D9CDB8] disabled:text-[#8A93A6] disabled:shadow-none sm:col-span-2 sm:text-base lg:col-span-1"
         >
           {submitting ? 'מוסיף...' : 'הוספת אורח'}
         </button>
       </form>
 
-      {formError ? <p className="mt-3 text-sm text-rose-700">{formError}</p> : null}
+      {formError ? <p className="mt-2 text-sm text-rose-700 sm:mt-3">{formError}</p> : null}
 
       {lastAdded ? (
-        <div className="mt-4 rounded-xl border border-[#C5A059]/50 bg-[#C5A059]/10 p-4">
-          <p className="mb-3 text-sm text-[#082D58]">
+        <div className="mt-3 rounded-xl border border-[#C5A059]/50 bg-[#C5A059]/10 p-3 sm:mt-4 sm:p-4">
+          <p className="mb-2 text-sm text-[#082D58] sm:mb-3">
             {lastAdded.name} נוסף לרשימה. שלחו את קישור האישור:
           </p>
           <InviteActions guest={lastAdded} messageType="invitation" />
