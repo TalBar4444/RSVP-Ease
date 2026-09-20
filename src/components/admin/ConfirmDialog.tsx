@@ -40,7 +40,7 @@ export default function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#082D58]/45 px-4"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#082D58]/45 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       onClick={loading ? undefined : onCancel}
       role="presentation"
     >
@@ -64,7 +64,7 @@ export default function ConfirmDialog({
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="flex-1 rounded-lg border border-[#C5A059]/80 bg-white/70 px-4 py-2.5 text-sm font-medium text-[#082D58] transition-colors hover:bg-white disabled:opacity-60"
+            className="min-h-11 flex-1 rounded-lg border border-[#C5A059]/80 bg-white/70 px-4 py-2.5 text-sm font-medium text-[#082D58] transition-colors hover:bg-white disabled:opacity-60"
           >
             {cancelLabel}
           </button>
@@ -72,7 +72,7 @@ export default function ConfirmDialog({
             type="button"
             onClick={onConfirm}
             disabled={loading}
-            className="flex-1 rounded-lg border border-rose-400 bg-rose-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:opacity-60"
+            className="min-h-11 flex-1 rounded-lg border border-rose-400 bg-rose-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:opacity-60"
           >
             {loading ? loadingLabel : confirmLabel}
           </button>

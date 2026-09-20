@@ -171,7 +171,7 @@ export default function GuestEditForm({
       </FormField>
       <div>
         <p className="mb-1.5 text-sm font-medium text-[#082D58]">סטטוס</p>
-        <div className="flex gap-2" role="radiogroup" aria-label="סטטוס">
+        <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="סטטוס">
           {GUEST_STATUSES.map((status) => {
             const selected = draft.status === status;
             return (
