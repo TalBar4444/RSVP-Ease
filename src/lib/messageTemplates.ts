@@ -15,6 +15,7 @@ const LTR = '\u200e';
 export type MessageTemplate = {
   id: MessageType;
   label: string;
+  shortLabel: string;
   hint: string;
   includesRsvpLink: boolean;
   build: (rsvpUrl?: string) => string;
@@ -28,6 +29,7 @@ export const MESSAGE_TEMPLATES: Record<MessageType, MessageTemplate> = {
   invitation: {
     id: 'invitation',
     label: 'הזמנה',
+    shortLabel: 'הזמנה',
     hint: 'ההודעה הראשונה לאורחים',
     includesRsvpLink: true,
     build: (rsvpUrl) =>
@@ -48,6 +50,7 @@ export const MESSAGE_TEMPLATES: Record<MessageType, MessageTemplate> = {
   rsvp_reminder: {
     id: 'rsvp_reminder',
     label: 'תזכורת אישור',
+    shortLabel: 'תזכורת',
     hint: 'מומלץ לאורחים שעדיין לא השיבו',
     includesRsvpLink: true,
     build: (rsvpUrl) =>
@@ -65,6 +68,7 @@ export const MESSAGE_TEMPLATES: Record<MessageType, MessageTemplate> = {
   day_of: {
     id: 'day_of',
     label: 'תזכורת ליום האירוע',
+    shortLabel: 'היום',
     hint: 'מומלץ לאורחים שאישרו הגעה, ביום האירוע',
     includesRsvpLink: false,
     build: () =>
@@ -78,6 +82,7 @@ export const MESSAGE_TEMPLATES: Record<MessageType, MessageTemplate> = {
   thank_you: {
     id: 'thank_you',
     label: 'תודה',
+    shortLabel: 'תודה',
     hint: 'מומלץ לאורחים שהגיעו, אחרי החתונה',
     includesRsvpLink: false,
     build: () =>
@@ -100,4 +105,9 @@ export function isMessageType(value: string): value is MessageType {
 
 export function getMessageTemplate(type: MessageType): MessageTemplate {
   return MESSAGE_TEMPLATES[type];
+}
+
+/** RSVP-page open is one guest-level fact; only the invitation may display it. */
+export function tracksGuestLinkOpen(type: MessageType): boolean {
+  return type === 'invitation';
 }

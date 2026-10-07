@@ -1,17 +1,23 @@
 import type { MessageType } from '../../lib/messageTemplates';
+import type { GuestOutreach } from '../../lib/guestOutreach';
 import type { Guest } from '../../types/guest';
 import DietaryBadges from './DietaryBadges';
 import InviteActions from './InviteActions';
+import MessageStatusDots from './MessageStatusDots';
 import StatusBadge from './StatusBadge';
 
 export default function GuestCard({
   guest,
+  outreach,
   messageType,
   onSelect,
+  onToggleSend,
 }: {
   guest: Guest;
+  outreach: GuestOutreach;
   messageType: MessageType;
   onSelect: () => void;
+  onToggleSend: () => void;
 }) {
   return (
     <article
@@ -25,7 +31,16 @@ export default function GuestCard({
             {guest.phone ?? '—'}
           </p>
         </div>
-        <StatusBadge status={guest.status} />
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge status={guest.status} />
+          <div onClick={(event) => event.stopPropagation()}>
+            <MessageStatusDots
+              outreach={outreach}
+              selectedType={messageType}
+              onToggleSelected={onToggleSend}
+            />
+          </div>
+        </div>
       </div>
 
       <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-sm">
@@ -34,10 +49,8 @@ export default function GuestCard({
           <dd className="truncate text-[#6F7C91]">{guest.group_affiliation ?? '—'}</dd>
         </div>
         <div>
-          <dt className="text-xs text-[#9AA6B8]">מבוגרים / ילדים</dt>
-          <dd className="text-[#082D58]">
-            {guest.guests_count} / {guest.children_count}
-          </dd>
+          <dt className="text-xs text-[#9AA6B8]">אורחים</dt>
+          <dd className="text-[#082D58]">{guest.guests_count}</dd>
         </div>
       </dl>
 

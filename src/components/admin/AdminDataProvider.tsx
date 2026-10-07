@@ -9,6 +9,24 @@ import {
   removeGuestFromList,
   type GuestRealtimePayload,
 } from '../../lib/adminGuestRealtime';
+import {
+  applyOpenRealtimeEvent,
+  applySendRealtimeEvent,
+  deleteGuestMessageSend,
+  fetchOutreachByGuestId,
+  isMissingOutreachRelationError,
+  removeGuestFromOutreach,
+  removeSendFromOutreach,
+  replayOutreachRealtimeEvents,
+  upsertGuestMessageSend,
+  upsertSendInOutreach,
+  type GuestMessageSend,
+  type GuestOpenRealtimePayload,
+  type GuestOutreach,
+  type GuestSendRealtimePayload,
+  type MessageChannel,
+} from '../../lib/guestOutreach';
+import type { MessageType } from '../../lib/messageTemplates';
 import { supabase } from '../../lib/supabaseClient';
 import type { Guest } from '../../types/guest';
 import { AdminDataContext, type AdminError } from './adminData';
@@ -16,6 +34,8 @@ import { AdminDataContext, type AdminError } from './adminData';
 type GuestRealtimeSync = {
   live: boolean;
   buffer: GuestRealtimePayload[];
+  sendBuffer: GuestSendRealtimePayload[];
+  openBuffer: GuestOpenRealtimePayload[];
 };
 
 export function AdminDataProvider({ children }: { children: ReactNode }) {
@@ -24,6 +44,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminCheckDone, setAdminCheckDone] = useState(false);
   const [guests, setGuests] = useState<Guest[]>([]);
+  const [outreachByGuestId, setOutreachByGuestId] = useState<Record<string, GuestOutreach>>({});
   const [guestsLoaded, setGuestsLoaded] = useState(false);
   const [error, setError] = useState<AdminError | null>(null);
   const readyUserIdRef = useRef<string | null>(null);
@@ -44,6 +65,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     setAdminCheckDone(false);
     setGuests([]);
+    setOutreachByGuestId({});
     setGuestsLoaded(false);
     setError(null);
   }, []);
@@ -108,6 +130,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
         setError(null);
         guestsLoadedRef.current = false;
         setGuests([]);
+        setOutreachByGuestId({});
         setGuestsLoaded(false);
       }
 
@@ -122,6 +145,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
           readyUserIdRef.current = currentUserId;
           guestsLoadedRef.current = false;
           setGuests([]);
+          setOutreachByGuestId({});
           setGuestsLoaded(false);
           setError({ kind: 'permission', message: 'אין הרשאת מנהל לחשבון זה.' });
         }
@@ -153,16 +177,33 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
 
     try {
       const snapshot = await fetchGuests();
+      let outreachSnapshot: Record<string, GuestOutreach> = {};
+      try {
+        outreachSnapshot = await fetchOutreachByGuestId();
+      } catch (outreachError) {
+        if (!isMissingOutreachRelationError(outreachError)) throw outreachError;
+        console.error(outreachError);
+      }
       if (!isCurrent()) return;
 
       setGuests(() => {
         let next = sortGuests(snapshot);
         if (sync && realtimeRef.current === sync) {
           next = replayGuestRealtimeEvents(next, sync.buffer.splice(0));
+        }
+        return next;
+      });
+      setOutreachByGuestId(() => {
+        let next = outreachSnapshot;
+        if (sync && realtimeRef.current === sync) {
+          next = replayOutreachRealtimeEvents(next, sync.sendBuffer.splice(0), sync.openBuffer.splice(0));
           sync.live = true;
         }
         return next;
       });
+      if (sync && realtimeRef.current === sync) {
+        sync.live = true;
+      }
       guestsLoadedRef.current = true;
       setGuestsLoaded(true);
       setError((current: AdminError | null) => (current?.kind === 'guests' ? null : current));
@@ -171,11 +212,11 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       console.error(err);
       if (!isCurrent()) return;
       if (sync && realtimeRef.current === sync) {
-        setGuests((current) => {
-          const next = replayGuestRealtimeEvents(current, sync.buffer.splice(0));
-          sync.live = true;
-          return next;
-        });
+        setGuests((current) => replayGuestRealtimeEvents(current, sync.buffer.splice(0)));
+        setOutreachByGuestId((current) =>
+          replayOutreachRealtimeEvents(current, sync.sendBuffer.splice(0), sync.openBuffer.splice(0)),
+        );
+        sync.live = true;
       }
       setError({ kind: 'guests', message: 'אירעה שגיאה בטעינת נתוני האורחים.' });
     }
@@ -185,7 +226,7 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
     if (!isAdmin || !userId) return;
 
     let cancelled = false;
-    const sync: GuestRealtimeSync = { live: false, buffer: [] };
+    const sync: GuestRealtimeSync = { live: false, buffer: [], sendBuffer: [], openBuffer: [] };
     realtimeRef.current = sync;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
@@ -211,6 +252,36 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
               return;
             }
             setGuests((current) => applyGuestRealtimeEvent(current, change));
+            if (change.eventType === 'DELETE' && typeof change.old.id === 'string') {
+              const deletedId = change.old.id;
+              setOutreachByGuestId((current) => removeGuestFromOutreach(current, deletedId));
+            }
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'guest_message_sends' },
+          (payload) => {
+            if (realtimeRef.current !== sync) return;
+            const change = payload as GuestSendRealtimePayload;
+            if (!sync.live) {
+              sync.sendBuffer.push(change);
+              return;
+            }
+            setOutreachByGuestId((current) => applySendRealtimeEvent(current, change));
+          },
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'guest_link_opens' },
+          (payload) => {
+            if (realtimeRef.current !== sync) return;
+            const change = payload as GuestOpenRealtimePayload;
+            if (!sync.live) {
+              sync.openBuffer.push(change);
+              return;
+            }
+            setOutreachByGuestId((current) => applyOpenRealtimeEvent(current, change));
           },
         )
         .subscribe((status) => {
@@ -250,7 +321,65 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
   const removeGuestFromCache = useCallback((guestId: string) => {
     if (!userIdRef.current) return;
     setGuests((current) => removeGuestFromList(current, guestId));
+    setOutreachByGuestId((current) => removeGuestFromOutreach(current, guestId));
   }, []);
+
+  const recordMessageSend = useCallback(
+    async (guestId: string, messageType: MessageType, channel: MessageChannel) => {
+      if (!userIdRef.current) return;
+      let previous: GuestMessageSend | undefined;
+      const optimistic: GuestMessageSend = {
+        channel,
+        sentAt: new Date().toISOString(),
+      };
+      setOutreachByGuestId((current) => {
+        previous = current[guestId]?.sends[messageType];
+        return upsertSendInOutreach(current, guestId, messageType, optimistic);
+      });
+      try {
+        const saved = await upsertGuestMessageSend({ guestId, messageType, channel });
+        if (!userIdRef.current) return;
+        setOutreachByGuestId((current) =>
+          upsertSendInOutreach(current, guestId, messageType, saved),
+        );
+      } catch (err) {
+        console.error(err);
+        setOutreachByGuestId((current) => {
+          if (!previous) return removeSendFromOutreach(current, guestId, messageType);
+          return upsertSendInOutreach(current, guestId, messageType, previous);
+        });
+        throw err;
+      }
+    },
+    [],
+  );
+
+  const toggleMessageSend = useCallback(
+    async (guestId: string, messageType: MessageType) => {
+      if (!userIdRef.current) return;
+      let previous: GuestMessageSend | undefined;
+      setOutreachByGuestId((current) => {
+        previous = current[guestId]?.sends[messageType];
+        if (!previous) return current;
+        return removeSendFromOutreach(current, guestId, messageType);
+      });
+      if (previous) {
+        const sent = previous;
+        try {
+          await deleteGuestMessageSend(guestId, messageType);
+        } catch (err) {
+          console.error(err);
+          setOutreachByGuestId((current) =>
+            upsertSendInOutreach(current, guestId, messageType, sent),
+          );
+          throw err;
+        }
+        return;
+      }
+      await recordMessageSend(guestId, messageType, 'copy');
+    },
+    [recordMessageSend],
+  );
 
   const refreshGuests = useCallback(async () => {
     await catchUpGuests();
@@ -268,10 +397,13 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       adminCheckDone,
       guests,
       guestsLoaded,
+      outreachByGuestId,
       error,
       addGuestToCache: upsertGuestInCache,
       updateGuestInCache: upsertGuestInCache,
       removeGuestFromCache,
+      recordMessageSend,
+      toggleMessageSend,
       refreshGuests,
       signOut,
     }),
@@ -282,9 +414,12 @@ export function AdminDataProvider({ children }: { children: ReactNode }) {
       adminCheckDone,
       guests,
       guestsLoaded,
+      outreachByGuestId,
       error,
       upsertGuestInCache,
       removeGuestFromCache,
+      recordMessageSend,
+      toggleMessageSend,
       refreshGuests,
       signOut,
     ],

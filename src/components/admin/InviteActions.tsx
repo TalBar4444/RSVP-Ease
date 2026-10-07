@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { getGuestRsvpUrl, getSmsInviteUrl, getWhatsAppInviteUrl, openWhatsAppChat } from '../../lib/guestInvites';
+import type { MessageChannel } from '../../lib/guestOutreach';
 import { DEFAULT_MESSAGE_TYPE, type MessageType } from '../../lib/messageTemplates';
 import type { Guest } from '../../types/guest';
+import { useAdminData } from './adminData';
 
 export default function InviteActions({
   guest,
@@ -10,6 +12,7 @@ export default function InviteActions({
   guest: Guest;
   messageType?: MessageType;
 }) {
+  const { recordMessageSend } = useAdminData();
   const [copied, setCopied] = useState(false);
   const copiedTimeoutRef = useRef<number | null>(null);
   const rsvpUrl = getGuestRsvpUrl(guest.id);
@@ -24,9 +27,16 @@ export default function InviteActions({
     };
   }, []);
 
+  const markSent = (channel: MessageChannel) => {
+    void recordMessageSend(guest.id, messageType, channel).catch((err) => {
+      console.error(err);
+    });
+  };
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(rsvpUrl);
+      markSent('copy');
       setCopied(true);
       if (copiedTimeoutRef.current !== null) {
         window.clearTimeout(copiedTimeoutRef.current);
@@ -56,6 +66,7 @@ export default function InviteActions({
         <a
           href={whatsappUrl}
           onClick={(event) => {
+            markSent('whatsapp');
             if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
               return;
             }
@@ -70,6 +81,7 @@ export default function InviteActions({
       {smsUrl ? (
         <a
           href={smsUrl}
+          onClick={() => markSent('sms')}
           className={`${actionClassName} border border-[#082D58] bg-[#082D58] text-white hover:bg-[#0b3a70]`}
         >
           הודעה

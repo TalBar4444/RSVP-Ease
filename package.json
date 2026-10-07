@@ -16,6 +16,7 @@
     "db:reset": "npx supabase db reset --local",
     "db:test": "npx supabase test db",
     "db:lint": "npx supabase db lint",
+    "test:unit": "tsx --test ./src/lib/*.test.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui"
   },

@@ -1,21 +1,30 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { getGuestMessage } from '../../lib/guestInvites';
 import {
+  getGuestOutreach,
+  guestHasOpenedLink,
+  guestHasSentMessage,
+} from '../../lib/guestOutreach';
+import {
   DEFAULT_MESSAGE_TYPE,
   MESSAGE_TYPE_LIST,
   getMessageTemplate,
   isMessageType,
+  tracksGuestLinkOpen,
   type MessageType,
 } from '../../lib/messageTemplates';
 import type { Guest, GuestStatus } from '../../types/guest';
+import { useAdminData } from './adminData';
 import DietaryBadges from './DietaryBadges';
 import GuestCard from './GuestCard';
 import GuestEditDialog from './guestEdit/GuestEditDialog';
 import { STATUS_LABELS, STATUS_STYLES } from './guestStatus';
 import InviteActions from './InviteActions';
+import MessageStatusDots from './MessageStatusDots';
 import StatusBadge from './StatusBadge';
 
 type StatusFilter = 'all' | GuestStatus;
+type OutreachFilter = 'all' | 'unsent' | 'sent' | 'opened';
 
 const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'הכל' },
@@ -23,6 +32,13 @@ const STATUS_FILTERS: { value: StatusFilter; label: string }[] = [
   { value: 'declined', label: STATUS_LABELS.declined },
   { value: 'pending', label: STATUS_LABELS.pending },
 ];
+
+const OUTREACH_FILTERS: { value: Exclude<OutreachFilter, 'all'>; label: string; requiresInvitationOpen?: boolean }[] =
+  [
+    { value: 'unsent', label: 'טרם נשלח' },
+    { value: 'sent', label: 'נשלח' },
+    { value: 'opened', label: 'נפתח', requiresInvitationOpen: true },
+  ];
 
 export default function GuestList({
   guests,
@@ -33,8 +49,10 @@ export default function GuestList({
   onGuestUpdated: (guest: Guest) => void;
   onDeleted: (guestId: string) => void;
 }) {
+  const { outreachByGuestId, toggleMessageSend } = useAdminData();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [outreachFilter, setOutreachFilter] = useState<OutreachFilter>('all');
   const [messageType, setMessageType] = useState<MessageType>(DEFAULT_MESSAGE_TYPE);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [selectedGuestId, setSelectedGuestId] = useState<string | null>(null);
@@ -69,15 +87,25 @@ export default function GuestList({
     return guests.filter((guest) => {
       const matchesStatus = statusFilter === 'all' || guest.status === statusFilter;
       if (!matchesStatus) return false;
+
+      const outreach = getGuestOutreach(outreachByGuestId, guest.id);
+      const matchesOutreach =
+        outreachFilter === 'all' ||
+        (outreachFilter === 'unsent' && !guestHasSentMessage(outreach, messageType)) ||
+        (outreachFilter === 'sent' && guestHasSentMessage(outreach, messageType)) ||
+        (outreachFilter === 'opened' && guestHasOpenedLink(outreach));
+      if (!matchesOutreach) return false;
+
       if (!query) return true;
       return (
         guest.name.toLowerCase().includes(query) ||
         (guest.group_affiliation?.toLowerCase().includes(query) ?? false)
       );
     });
-  }, [guests, searchQuery, statusFilter]);
+  }, [guests, searchQuery, statusFilter, outreachFilter, outreachByGuestId, messageType]);
 
-  const hasActiveFilters = Boolean(searchQuery.trim()) || statusFilter !== 'all';
+  const hasActiveFilters =
+    Boolean(searchQuery.trim()) || statusFilter !== 'all' || outreachFilter !== 'all';
 
   const groupOptions = useMemo(() => {
     const names = new Set<string>();
@@ -109,7 +137,12 @@ export default function GuestList({
               id="message-type"
               value={messageType}
               onChange={(e) => {
-                if (isMessageType(e.target.value)) setMessageType(e.target.value);
+                if (!isMessageType(e.target.value)) return;
+                const nextType = e.target.value;
+                setMessageType(nextType);
+                if (outreachFilter === 'opened' && !tracksGuestLinkOpen(nextType)) {
+                  setOutreachFilter('all');
+                }
               }}
               title={selectedTemplate.hint}
               className="admin-select-chevron min-h-11 min-w-0 flex-1 rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] py-1.5 ps-2.5 pe-6 text-xs font-medium text-[#082D58] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25 sm:max-w-[11rem] sm:flex-none lg:min-h-0"
@@ -164,27 +197,51 @@ export default function GuestList({
               className="w-full rounded-lg border border-[#C5A059]/80 bg-[#FBF8F2] px-4 py-2.5 text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/25"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="סינון לפי סטטוס">
-            {STATUS_FILTERS.map((filter) => {
-              const selected = statusFilter === filter.value;
-              return (
-                <button
-                  key={filter.value}
-                  type="button"
-                  aria-pressed={selected}
-                  onClick={() => setStatusFilter(filter.value)}
-                  className={`min-h-9 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors lg:min-h-0 ${
-                    selected
-                      ? filter.value === 'all'
+          <div className="flex flex-col items-start gap-2">
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="סינון לפי סטטוס">
+              {STATUS_FILTERS.map((filter) => {
+                const selected = statusFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setStatusFilter(filter.value)}
+                    className={`min-h-9 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors lg:min-h-0 ${
+                      selected
+                        ? filter.value === 'all'
+                          ? 'border-[#082D58] bg-[#082D58] text-white'
+                          : STATUS_STYLES[filter.value]
+                        : 'border-[#C5A059]/60 bg-white/70 text-[#6F7C91] hover:border-[#C5A059] hover:bg-white'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-wrap items-center gap-2" role="group" aria-label="סינון לפי שליחה">
+              {OUTREACH_FILTERS.filter(
+                (filter) => !filter.requiresInvitationOpen || tracksGuestLinkOpen(messageType),
+              ).map((filter) => {
+                const selected = outreachFilter === filter.value;
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() => setOutreachFilter(selected ? 'all' : filter.value)}
+                    className={`min-h-9 whitespace-nowrap rounded-full border px-3 py-1.5 text-xs font-medium transition-colors lg:min-h-0 ${
+                      selected
                         ? 'border-[#082D58] bg-[#082D58] text-white'
-                        : STATUS_STYLES[filter.value]
-                      : 'border-[#C5A059]/60 bg-white/70 text-[#6F7C91] hover:border-[#C5A059] hover:bg-white'
-                  }`}
-                >
-                  {filter.label}
-                </button>
-              );
-            })}
+                        : 'border-[#C5A059]/60 bg-white/70 text-[#6F7C91] hover:border-[#C5A059] hover:bg-white'
+                    }`}
+                  >
+                    {filter.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
@@ -198,8 +255,14 @@ export default function GuestList({
               <GuestCard
                 key={guest.id}
                 guest={guest}
+                outreach={getGuestOutreach(outreachByGuestId, guest.id)}
                 messageType={messageType}
                 onSelect={() => setSelectedGuestId(guest.id)}
+                onToggleSend={() => {
+                  void toggleMessageSend(guest.id, messageType).catch((err) => {
+                    console.error(err);
+                  });
+                }}
               />
             ))
           )}
@@ -213,8 +276,7 @@ export default function GuestList({
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">נייד</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">שיוך לקבוצה</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">סטטוס</th>
-                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">מבוגרים</th>
-                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">ילדים</th>
+                <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">אורחים</th>
                 <th className="px-5 py-3 text-center font-medium text-[#6F7C91]">תזונה</th>
                 <th className="px-5 py-3 font-medium text-[#6F7C91]">שליחה</th>
               </tr>
@@ -222,7 +284,7 @@ export default function GuestList({
             <tbody>
               {filteredGuests.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-5 py-8 text-center text-[#9AA6B8]">
+                  <td colSpan={7} className="px-5 py-8 text-center text-[#9AA6B8]">
                     {emptyMessage}
                   </td>
                 </tr>
@@ -242,7 +304,6 @@ export default function GuestList({
                       <StatusBadge status={guest.status} />
                     </td>
                     <td className="px-5 py-3 text-center">{guest.guests_count}</td>
-                    <td className="px-5 py-3 text-center">{guest.children_count}</td>
                     <td className="px-5 py-3 text-center">
                       <DietaryBadges guest={guest} />
                     </td>
@@ -250,7 +311,18 @@ export default function GuestList({
                       className="px-5 py-3"
                       onClick={(event) => event.stopPropagation()}
                     >
-                      <InviteActions guest={guest} messageType={messageType} />
+                      <div className="flex flex-col items-start gap-2">
+                        <MessageStatusDots
+                          outreach={getGuestOutreach(outreachByGuestId, guest.id)}
+                          selectedType={messageType}
+                          onToggleSelected={() => {
+                            void toggleMessageSend(guest.id, messageType).catch((err) => {
+                              console.error(err);
+                            });
+                          }}
+                        />
+                        <InviteActions guest={guest} messageType={messageType} />
+                      </div>
                     </td>
                   </tr>
                 ))
