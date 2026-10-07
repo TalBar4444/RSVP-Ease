@@ -2,7 +2,7 @@ import { isGuestStatus, type Guest, type GuestStatus } from '../types/guest';
 import { supabase } from './supabaseClient';
 
 const GUEST_COLUMNS =
-  'id, name, phone, group_affiliation, status, guests_count, children_count, is_vegetarian, is_vegan, is_gluten_free, other_dietary_notes, updated_at';
+  'id, name, phone, group_affiliation, status, guests_count, vegetarian_count, vegan_count, gluten_free_count, kids_meal_count, other_dietary_notes, updated_at';
 
 export async function isCurrentUserAdmin(): Promise<boolean> {
   const { data, error } = await supabase.rpc('is_current_user_admin');
@@ -24,17 +24,22 @@ export function isGuestUpdateConflictError(error: unknown): error is GuestUpdate
   return error instanceof GuestUpdateConflictError;
 }
 
+function isCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
 export function parseGuest(data: unknown): Guest | null {
   if (!data || typeof data !== 'object') return null;
 
   const row = data as Record<string, unknown>;
   if (typeof row.id !== 'string' || typeof row.name !== 'string') return null;
   if (!isGuestStatus(row.status)) return null;
-  if (typeof row.guests_count !== 'number' || typeof row.children_count !== 'number') return null;
   if (
-    typeof row.is_vegetarian !== 'boolean' ||
-    typeof row.is_vegan !== 'boolean' ||
-    typeof row.is_gluten_free !== 'boolean'
+    !isCount(row.guests_count) ||
+    !isCount(row.vegetarian_count) ||
+    !isCount(row.vegan_count) ||
+    !isCount(row.gluten_free_count) ||
+    !isCount(row.kids_meal_count)
   ) {
     return null;
   }
@@ -47,10 +52,10 @@ export function parseGuest(data: unknown): Guest | null {
     group_affiliation: typeof row.group_affiliation === 'string' ? row.group_affiliation : null,
     status: row.status,
     guests_count: row.guests_count,
-    children_count: row.children_count,
-    is_vegetarian: row.is_vegetarian,
-    is_vegan: row.is_vegan,
-    is_gluten_free: row.is_gluten_free,
+    vegetarian_count: row.vegetarian_count,
+    vegan_count: row.vegan_count,
+    gluten_free_count: row.gluten_free_count,
+    kids_meal_count: row.kids_meal_count,
     other_dietary_notes: typeof row.other_dietary_notes === 'string' ? row.other_dietary_notes : null,
     updated_at: row.updated_at,
   };
@@ -97,10 +102,10 @@ export type GuestUpdateInput = {
   groupAffiliation: string | null;
   status: GuestStatus;
   guestsCount: number;
-  childrenCount: number;
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
+  vegetarianCount: number;
+  veganCount: number;
+  glutenFreeCount: number;
+  kidsMealCount: number;
   otherDietaryNotes: string | null;
 };
 
@@ -117,10 +122,10 @@ export async function updateGuest(
       group_affiliation: input.groupAffiliation,
       status: input.status,
       guests_count: input.guestsCount,
-      children_count: input.childrenCount,
-      is_vegetarian: input.isVegetarian,
-      is_vegan: input.isVegan,
-      is_gluten_free: input.isGlutenFree,
+      vegetarian_count: input.vegetarianCount,
+      vegan_count: input.veganCount,
+      gluten_free_count: input.glutenFreeCount,
+      kids_meal_count: input.kidsMealCount,
       other_dietary_notes: input.otherDietaryNotes,
     })
     .eq('id', guestId)

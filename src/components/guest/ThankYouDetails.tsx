@@ -1,6 +1,6 @@
 import { wedding } from '../../theme/wedding';
 import type { GuestStatus } from '../../types/guest';
-import { DIET_LABELS } from '../admin/guestDiet';
+import { guestDietBadges } from '../admin/guestDiet';
 
 function DetailRow({
   label,
@@ -23,27 +23,30 @@ export default function ThankYouDetails({
   name,
   status,
   guestsCount,
-  childrenCount,
-  isVegetarian,
-  isVegan,
-  isGlutenFree,
+  vegetarianCount,
+  veganCount,
+  glutenFreeCount,
+  kidsMealCount,
   otherDietary,
 }: {
   name: string;
   status: GuestStatus;
   guestsCount: number;
-  childrenCount: number;
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
+  vegetarianCount: number;
+  veganCount: number;
+  glutenFreeCount: number;
+  kidsMealCount: number;
   otherDietary: string;
 }) {
   const isAttending = status === 'attending';
-  const dietLabels = [
-    isAttending && isVegetarian ? DIET_LABELS.vegetarian : null,
-    isAttending && isVegan ? DIET_LABELS.vegan : null,
-    isAttending && isGlutenFree ? DIET_LABELS.glutenFree : null,
-  ].filter((label) => label !== null);
+  const dietLabels = isAttending
+    ? guestDietBadges({
+        vegetarian_count: vegetarianCount,
+        vegan_count: veganCount,
+        gluten_free_count: glutenFreeCount,
+        kids_meal_count: kidsMealCount,
+      })
+    : [];
   const notes = isAttending ? otherDietary.trim() : '';
 
   return (
@@ -63,8 +66,7 @@ export default function ThankYouDetails({
 
       {isAttending ? (
         <>
-          <DetailRow label="מבוגרים" value={String(guestsCount)} />
-          <DetailRow label="ילדים" value={String(childrenCount)} />
+          <DetailRow label="אורחים" value={String(guestsCount)} />
           <DetailRow label="קבלת פנים" value={wedding.receptionTime} />
         </>
       ) : null}
@@ -73,12 +75,12 @@ export default function ThankYouDetails({
         <div className="flex min-h-[2.75rem] items-center justify-between gap-4 border-t border-[#E6DCCB]">
           <span className="text-[1.02rem] font-medium">העדפות קולינריות</span>
           <div className="flex flex-wrap justify-end gap-1">
-            {dietLabels.map((label) => (
+            {dietLabels.map((item) => (
               <span
-                key={label}
+                key={item.key}
                 className="inline-flex whitespace-nowrap rounded-md border border-[#C5A059]/80 bg-[#C5A059] px-2 py-0.5 text-xs font-medium text-white"
               >
-                {label}
+                {item.label}
               </span>
             ))}
           </div>

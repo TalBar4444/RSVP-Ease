@@ -15,10 +15,10 @@ export interface Guest {
   group_affiliation: string | null;
   status: GuestStatus;
   guests_count: number;
-  children_count: number;
-  is_vegetarian: boolean;
-  is_vegan: boolean;
-  is_gluten_free: boolean;
+  vegetarian_count: number;
+  vegan_count: number;
+  gluten_free_count: number;
+  kids_meal_count: number;
   other_dietary_notes: string | null;
   updated_at: string;
 }
@@ -28,10 +28,9 @@ export type GuestRsvp = Omit<Guest, 'phone' | 'group_affiliation' | 'updated_at'
 
 export interface GuestKpiMetrics {
   totalConfirmed: number;
-  totalAdults: number;
-  totalChildren: number;
   pendingInvitations: number;
   vegetarianCount: number;
   veganCount: number;
   glutenFreeCount: number;
+  kidsMealCount: number;
 }

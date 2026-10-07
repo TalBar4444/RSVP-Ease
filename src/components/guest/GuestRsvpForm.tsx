@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { fetchGuestRsvp, submitGuestRsvp } from '../../lib/guestRsvp';
+import { clampDietCounts, EMPTY_DIET_COUNTS, remainingSpecialMeals, type DietCounts } from '../../lib/dietCounts';
+import { fetchGuestRsvp, recordGuestLinkOpen, submitGuestRsvp } from '../../lib/guestRsvp';
 import { wedding } from '../../theme/wedding';
 import { MAX_DIETARY_NOTES_LENGTH, MAX_PARTY_COUNT, type GuestRsvp, type GuestStatus } from '../../types/guest';
 import { DIET_LABELS } from '../admin/guestDiet';
 import ChoiceButton from './ChoiceButton';
 import GuestShell from './GuestShell';
-import { IconChild, IconPeople, IconPlane, IconQuestion, IconWheat } from './icons';
+import { IconCheck, IconFamily, IconPlane, IconQuestion, IconWheat } from './icons';
 import Stepper from './Stepper';
 import ThankYouDetails from './ThankYouDetails';
 import WeddingHeader from './WeddingHeader';
@@ -16,12 +17,73 @@ const previewGuest: GuestRsvp = {
   name: 'אורח לדוגמה',
   status: 'attending',
   guests_count: 2,
-  children_count: 1,
-  is_vegetarian: true,
-  is_vegan: false,
-  is_gluten_free: false,
+  vegetarian_count: 1,
+  vegan_count: 0,
+  gluten_free_count: 0,
+  kids_meal_count: 0,
   other_dietary_notes: null,
 };
+
+function dietsFromGuest(guest: GuestRsvp): DietCounts {
+  return clampDietCounts(
+    {
+      vegetarianCount: guest.vegetarian_count,
+      veganCount: guest.vegan_count,
+      glutenFreeCount: guest.gluten_free_count,
+      kidsMealCount: guest.kids_meal_count,
+    },
+    guest.guests_count,
+  );
+}
+
+function DietQuantityOption({
+  label,
+  count,
+  remaining,
+  onChange,
+}: {
+  label: string;
+  count: number;
+  remaining: number;
+  onChange: (next: number) => void;
+}) {
+  const max = count + remaining;
+  const selected = count > 0;
+
+  return (
+    <div
+      className={`flex min-h-11 items-center justify-between gap-0.5 rounded-lg px-1 ${
+        selected
+          ? 'border border-[#C5A059] bg-[#C5A059] text-white shadow-[0_5px_14px_rgba(197,160,89,0.18)]'
+          : 'border border-[#C5A059]/80 bg-[#FBF8F2]/80 text-[#082D58]'
+      }`}
+    >
+      <button
+        type="button"
+        aria-pressed={selected}
+        onClick={() => {
+          if (count > 0) onChange(0);
+          else if (remaining > 0) onChange(1);
+        }}
+        className="flex min-w-0 flex-1 items-center justify-center gap-0.5 py-2 text-[1.05rem] font-normal"
+      >
+        {selected ? <IconCheck className="h-4 w-4 shrink-0 text-white" /> : null}
+        <span className="whitespace-nowrap">{label}</span>
+      </button>
+      <Stepper
+        compact
+        inverted={selected}
+        value={count}
+        min={0}
+        max={max}
+        onDecrease={() => onChange(Math.max(0, count - 1))}
+        onIncrease={() => onChange(Math.min(max, count + 1))}
+        decreaseLabel={`הפחתת ${label}`}
+        increaseLabel={`הוספת ${label}`}
+      />
+    </div>
+  );
+}
 
 export default function GuestRsvpForm() {
   const { guestId } = useParams();
@@ -37,10 +99,7 @@ export default function GuestRsvpForm() {
 
   const [status, setStatus] = useState<GuestStatus>('pending');
   const [guestsCount, setGuestsCount] = useState(1);
-  const [childrenCount, setChildrenCount] = useState(0);
-  const [isVegetarian, setIsVegetarian] = useState(false);
-  const [isVegan, setIsVegan] = useState(false);
-  const [isGlutenFree, setIsGlutenFree] = useState(false);
+  const [dietCounts, setDietCounts] = useState<DietCounts>(EMPTY_DIET_COUNTS);
   const [otherDietary, setOtherDietary] = useState('');
   const [showOtherText, setShowOtherText] = useState(false);
 
@@ -63,8 +122,9 @@ export default function GuestRsvpForm() {
           setGuest(previewGuest);
           setStatus(previewGuest.status);
           setGuestsCount(previewGuest.guests_count);
-          setChildrenCount(previewGuest.children_count);
-          setIsVegetarian(previewGuest.is_vegetarian);
+          setDietCounts(dietsFromGuest(previewGuest));
+          setOtherDietary('');
+          setShowOtherText(false);
           setLoading(false);
           return;
         }
@@ -83,12 +143,12 @@ export default function GuestRsvpForm() {
           setGuest(fetchedGuest);
           setStatus(fetchedGuest.status);
           setGuestsCount(fetchedGuest.guests_count || 1);
-          setChildrenCount(fetchedGuest.children_count || 0);
-          setIsVegetarian(fetchedGuest.is_vegetarian);
-          setIsVegan(fetchedGuest.is_vegan);
-          setIsGlutenFree(fetchedGuest.is_gluten_free);
+          setDietCounts(dietsFromGuest(fetchedGuest));
           setOtherDietary((fetchedGuest.other_dietary_notes || '').slice(0, MAX_DIETARY_NOTES_LENGTH));
-          if (fetchedGuest.other_dietary_notes) setShowOtherText(true);
+          setShowOtherText(Boolean(fetchedGuest.other_dietary_notes));
+          if (document.visibilityState === 'visible') {
+            void recordGuestLinkOpen(fetchedGuest.id);
+          }
         } else {
           setError('אורח לא נמצא במערכת.');
         }
@@ -108,24 +168,44 @@ export default function GuestRsvpForm() {
     };
   }, [guestId]);
 
+  const attendingDiets = status === 'attending' ? clampDietCounts(dietCounts, guestsCount) : EMPTY_DIET_COUNTS;
+  const remainingMeals = remainingSpecialMeals(attendingDiets, guestsCount);
+
+  const applyPartySize = (nextCount: number) => {
+    const next = Math.min(MAX_PARTY_COUNT, Math.max(1, nextCount));
+    setGuestsCount(next);
+    setDietCounts((current) => clampDietCounts(current, next));
+  };
+
+  const applyDietCount = (field: keyof DietCounts, nextValue: number) => {
+    setDietCounts((current) => {
+      const remaining = remainingSpecialMeals(current, guestsCount);
+      const max = current[field] + remaining;
+      return { ...current, [field]: Math.min(max, Math.max(0, nextValue)) };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!guest) return;
     if (status !== 'attending' && status !== 'declined') return;
 
+    const isAttending = status === 'attending';
+    const nextGuests = isAttending ? guestsCount : 0;
+    const nextDiets = isAttending ? clampDietCounts(dietCounts, guestsCount) : EMPTY_DIET_COUNTS;
+    const nextNotes =
+      isAttending && showOtherText ? otherDietary.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null : null;
+
     if (import.meta.env.DEV && guest.id === previewGuest.id) {
       setGuest({
         ...guest,
         status,
-        guests_count: status === 'attending' ? guestsCount : 0,
-        children_count: status === 'attending' ? childrenCount : 0,
-        is_vegetarian: status === 'attending' && isVegetarian,
-        is_vegan: status === 'attending' && isVegan,
-        is_gluten_free: status === 'attending' && isGlutenFree,
-        other_dietary_notes:
-          status === 'attending' && showOtherText
-            ? otherDietary.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null
-            : null,
+        guests_count: nextGuests,
+        vegetarian_count: nextDiets.vegetarianCount,
+        vegan_count: nextDiets.veganCount,
+        gluten_free_count: nextDiets.glutenFreeCount,
+        kids_meal_count: nextDiets.kidsMealCount,
+        other_dietary_notes: nextNotes,
       });
       setEditing(false);
       setSuccess(true);
@@ -138,29 +218,26 @@ export default function GuestRsvpForm() {
     setSubmitError(null);
 
     try {
-      const isAttending = status === 'attending';
       await submitGuestRsvp({
         guestId: submittedGuestId,
         status,
-        guestsCount: isAttending ? guestsCount : 0,
-        childrenCount: isAttending ? childrenCount : 0,
-        isVegetarian: isAttending && isVegetarian,
-        isVegan: isAttending && isVegan,
-        isGlutenFree: isAttending && isGlutenFree,
-        otherDietaryNotes:
-          isAttending && showOtherText ? otherDietary.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null : null,
+        guestsCount: nextGuests,
+        vegetarianCount: nextDiets.vegetarianCount,
+        veganCount: nextDiets.veganCount,
+        glutenFreeCount: nextDiets.glutenFreeCount,
+        kidsMealCount: nextDiets.kidsMealCount,
+        otherDietaryNotes: nextNotes,
       });
       if (submitId !== submitIdRef.current || guestIdRef.current !== submittedGuestId) return;
       setGuest({
         ...guest,
         status,
-        guests_count: isAttending ? guestsCount : 0,
-        children_count: isAttending ? childrenCount : 0,
-        is_vegetarian: isAttending && isVegetarian,
-        is_vegan: isAttending && isVegan,
-        is_gluten_free: isAttending && isGlutenFree,
-        other_dietary_notes:
-          isAttending && showOtherText ? otherDietary.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null : null,
+        guests_count: nextGuests,
+        vegetarian_count: nextDiets.vegetarianCount,
+        vegan_count: nextDiets.veganCount,
+        gluten_free_count: nextDiets.glutenFreeCount,
+        kids_meal_count: nextDiets.kidsMealCount,
+        other_dietary_notes: nextNotes,
       });
       setEditing(false);
       setSuccess(true);
@@ -218,10 +295,10 @@ export default function GuestRsvpForm() {
           name={guest.name}
           status={status}
           guestsCount={isAttending ? guestsCount : 0}
-          childrenCount={isAttending ? childrenCount : 0}
-          isVegetarian={isAttending && isVegetarian}
-          isVegan={isAttending && isVegan}
-          isGlutenFree={isAttending && isGlutenFree}
+          vegetarianCount={attendingDiets.vegetarianCount}
+          veganCount={attendingDiets.veganCount}
+          glutenFreeCount={attendingDiets.glutenFreeCount}
+          kidsMealCount={attendingDiets.kidsMealCount}
           otherDietary={isAttending && showOtherText ? otherDietary : ''}
         />
         <button
@@ -260,53 +337,53 @@ export default function GuestRsvpForm() {
 
         {status === 'attending' && (
           <div className="guest-details">
-            <section className="flex min-h-[6.1rem] items-center justify-between gap-3 border-t border-[#E6DCCB]">
-              <div className="flex items-center gap-3">
-                <IconPeople />
-                <p className="text-[1.05rem] font-medium">כמות מבוגרים</p>
-              </div>
-              <Stepper
-                value={guestsCount}
-                min={1}
-                max={MAX_PARTY_COUNT}
-                onDecrease={() => setGuestsCount(Math.max(1, guestsCount - 1))}
-                onIncrease={() => setGuestsCount(Math.min(MAX_PARTY_COUNT, guestsCount + 1))}
-                decreaseLabel="הפחתת מבוגרים"
-                increaseLabel="הוספת מבוגרים"
-              />
-            </section>
-
-            <section className="flex min-h-[6.1rem] items-center justify-between gap-3 border-t border-[#E6DCCB]">
-              <div className="flex items-center gap-3">
-                <IconChild />
-                <p className="text-[1.05rem] font-medium">כמות ילדים</p>
-              </div>
-              <Stepper
-                value={childrenCount}
-                min={0}
-                max={MAX_PARTY_COUNT}
-                onDecrease={() => setChildrenCount(Math.max(0, childrenCount - 1))}
-                onIncrease={() => setChildrenCount(Math.min(MAX_PARTY_COUNT, childrenCount + 1))}
-                decreaseLabel="הפחתת ילדים"
-                increaseLabel="הוספת ילדים"
-              />
-            </section>
-
             <section className="border-t border-[#E6DCCB] pt-[1.35rem]">
               <div className="mb-[0.95rem] flex items-center gap-3">
                 <IconWheat />
                 <h2 className="text-[1.05rem] font-medium">העדפות קולינריות מיוחדות?</h2>
               </div>
-              <div className="grid grid-cols-3 gap-[0.9rem]">
-                <ChoiceButton selected={isVegetarian} onClick={() => setIsVegetarian(!isVegetarian)} tone="gold">
-                  {DIET_LABELS.vegetarian}
-                </ChoiceButton>
-                <ChoiceButton selected={isVegan} onClick={() => setIsVegan(!isVegan)} tone="gold">
-                  {DIET_LABELS.vegan}
-                </ChoiceButton>
-                <ChoiceButton selected={isGlutenFree} onClick={() => setIsGlutenFree(!isGlutenFree)} tone="gold">
-                  {DIET_LABELS.glutenFree}
-                </ChoiceButton>
+
+              <div className="mb-[0.35rem] flex min-h-[6.1rem] items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <IconFamily />
+                  <p className="text-[1.05rem] font-medium">כמה תגיעו?</p>
+                </div>
+                <Stepper
+                  value={guestsCount}
+                  min={1}
+                  max={MAX_PARTY_COUNT}
+                  onDecrease={() => applyPartySize(guestsCount - 1)}
+                  onIncrease={() => applyPartySize(guestsCount + 1)}
+                  decreaseLabel="הפחתת אורחים"
+                  increaseLabel="הוספת אורחים"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-[0.9rem]">
+                <DietQuantityOption
+                  label={DIET_LABELS.vegetarian}
+                  count={attendingDiets.vegetarianCount}
+                  remaining={remainingMeals}
+                  onChange={(next) => applyDietCount('vegetarianCount', next)}
+                />
+                <DietQuantityOption
+                  label={DIET_LABELS.vegan}
+                  count={attendingDiets.veganCount}
+                  remaining={remainingMeals}
+                  onChange={(next) => applyDietCount('veganCount', next)}
+                />
+                <DietQuantityOption
+                  label={DIET_LABELS.glutenFree}
+                  count={attendingDiets.glutenFreeCount}
+                  remaining={remainingMeals}
+                  onChange={(next) => applyDietCount('glutenFreeCount', next)}
+                />
+                <DietQuantityOption
+                  label={DIET_LABELS.kidsMeal}
+                  count={attendingDiets.kidsMealCount}
+                  remaining={remainingMeals}
+                  onChange={(next) => applyDietCount('kidsMealCount', next)}
+                />
               </div>
 
               <label className="mt-[2.15rem] flex min-h-[3.55rem] cursor-pointer items-center gap-3 rounded-lg border border-[#D8C8AA] bg-white/25 px-4">
@@ -319,23 +396,25 @@ export default function GuestRsvpForm() {
                 <span className="text-[1.02rem] text-[#082D58]">יש רגישויות או משהו אחר?</span>
               </label>
 
-              {showOtherText && (
-                <div className="mt-2">
-                  <textarea
-                    id="other-dietary"
-                    value={otherDietary}
-                    onChange={(e) => setOtherDietary(e.target.value.slice(0, MAX_DIETARY_NOTES_LENGTH))}
-                    maxLength={MAX_DIETARY_NOTES_LENGTH}
-                    aria-label="פירוט אלרגיות או בקשות מיוחדות"
-                    placeholder="פירוט אלרגיות או בקשות מיוחדות..."
-                    rows={2}
-                    className="w-full resize-none rounded-lg border border-[#C5A059] bg-white/75 p-3 text-base text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/20"
-                  />
-                  <p className="mt-1 text-left text-xs text-[#9AA6B8]" dir="ltr">
-                    {otherDietary.length}/{MAX_DIETARY_NOTES_LENGTH}
-                  </p>
-                </div>
-              )}
+              <div className="mt-2 h-[5.35rem]">
+                {showOtherText ? (
+                  <>
+                    <textarea
+                      id="other-dietary"
+                      value={otherDietary}
+                      onChange={(e) => setOtherDietary(e.target.value.slice(0, MAX_DIETARY_NOTES_LENGTH))}
+                      maxLength={MAX_DIETARY_NOTES_LENGTH}
+                      aria-label="פירוט אלרגיות או בקשות מיוחדות"
+                      placeholder="פירוט אלרגיות או בקשות מיוחדות..."
+                      rows={2}
+                      className="h-[4.1rem] w-full resize-none rounded-lg border border-[#C5A059] bg-white/75 p-3 text-base text-[#082D58] placeholder-[#9AA6B8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]/20"
+                    />
+                    <p className="mt-1 h-4 text-left text-xs leading-4 text-[#9AA6B8]" dir="ltr">
+                      {otherDietary.length}/{MAX_DIETARY_NOTES_LENGTH}
+                    </p>
+                  </>
+                ) : null}
+              </div>
             </section>
           </div>
         )}
@@ -358,4 +437,3 @@ export default function GuestRsvpForm() {
     </GuestShell>
   );
 }
-

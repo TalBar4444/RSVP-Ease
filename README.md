@@ -8,12 +8,12 @@ Built with React, TypeScript, Vite, Tailwind CSS, and Supabase.
 
 ### Guest
 - **Personal invite links** (`/rsvp/<guest-uuid>`) — the UUID is the capability; no login.
-- **Hebrew, mobile-first RSVP** — attending / not attending, adult and child counts, dietary needs (vegetarian, vegan, gluten-free, free-text allergies).
+- **Hebrew, mobile-first RSVP** — attending / not attending, guest count, and special meals (vegetarian, vegan, gluten-free, kids meals) with quantities capped by that count, plus free-text allergies.
 - **Home page** (`/`) reminds guests to use the WhatsApp link they were sent.
 
 ### Admin (`/admin`)
 - **Email/password login** (Supabase Auth) with optional “remember me”. Access is limited to users listed in `admin_users`. Open admin sessions stay in sync over Realtime.
-- **KPIs** — confirmed headcount, adults vs children, pending replies, dietary totals.
+- **KPIs** — confirmed guest headcount, pending replies, special-meal totals.
 - **Guest list** — filter by status, edit guest details (name, phone, group, RSVP, counts, dietary) in a dialog, delete guests.
 - **Add a guest** and send their invite via **WhatsApp**, **SMS**, or copied link.
 

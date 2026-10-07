@@ -10,10 +10,10 @@ insert into public.guests (
   group_affiliation,
   status,
   guests_count,
-  children_count,
-  is_vegetarian,
-  is_vegan,
-  is_gluten_free,
+  vegetarian_count,
+  vegan_count,
+  gluten_free_count,
+  kids_meal_count,
   other_dietary_notes
 ) values (
   'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
@@ -23,9 +23,9 @@ insert into public.guests (
   'pending',
   0,
   0,
-  false,
-  false,
-  false,
+  0,
+  0,
+  0,
   null
 );
 
@@ -50,15 +50,15 @@ select is(
     ) as key
   ),
   array[
-    'children_count',
+    'gluten_free_count',
     'guests_count',
     'id',
-    'is_gluten_free',
-    'is_vegan',
-    'is_vegetarian',
+    'kids_meal_count',
     'name',
     'other_dietary_notes',
-    'status'
+    'status',
+    'vegan_count',
+    'vegetarian_count'
   ]::text[],
   'get_guest returns only the intended public fields'
 );
@@ -75,7 +75,7 @@ select throws_ok(
   $$ select public.submit_rsvp(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     'pending',
-    2, 0, false, false, false, null
+    2, 0, 0, 0, 0, null
   ) $$,
   'P0001',
   'Invalid RSVP status',
@@ -86,40 +86,40 @@ select throws_ok(
   $$ select public.submit_rsvp(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     'attending',
-    0, 0, false, false, false, null
+    0, 0, 0, 0, 0, null
   ) $$,
   'P0001',
-  'Invalid adult guest count',
-  'submit_rsvp rejects attending with 0 adults'
+  'Invalid guest count',
+  'submit_rsvp rejects attending with 0 guests'
 );
 
 select throws_ok(
   $$ select public.submit_rsvp(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     'attending',
-    51, 0, false, false, false, null
+    51, 0, 0, 0, 0, null
   ) $$,
   'P0001',
-  'Invalid adult guest count',
-  'submit_rsvp rejects attending with more than 50 adults'
+  'Invalid guest count',
+  'submit_rsvp rejects attending with more than 50 guests'
 );
 
 select throws_ok(
   $$ select public.submit_rsvp(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     'attending',
-    2, -1, false, false, false, null
+    2, 2, 1, 0, 0, null
   ) $$,
   'P0001',
-  'Invalid children count',
-  'submit_rsvp rejects negative children'
+  'Invalid special meal counts',
+  'submit_rsvp rejects a special-meal total above guests_count'
 );
 
 select throws_ok(
   $$ select public.submit_rsvp(
     'ffffffff-ffff-4fff-8fff-ffffffffffff',
     'attending',
-    2, 0, false, false, false, null
+    2, 0, 0, 0, 0, null
   ) $$,
   'P0001',
   'Guest not found',
@@ -130,7 +130,7 @@ select lives_ok(
   $$ select public.submit_rsvp(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     'attending',
-    2, 1, true, false, true, 'nut allergy'
+    2, 1, 0, 1, 0, 'nut allergy'
   ) $$,
   'submit_rsvp accepts a valid attending response'
 );
@@ -145,10 +145,10 @@ select is(
       group_affiliation,
       status,
       guests_count,
-      children_count,
-      is_vegetarian,
-      is_vegan,
-      is_gluten_free,
+      vegetarian_count,
+      vegan_count,
+      gluten_free_count,
+      kids_meal_count,
       other_dietary_notes
     )
     from public.guests
@@ -161,9 +161,9 @@ select is(
     'attending'::text,
     2,
     1,
-    true,
-    false,
-    true,
+    0,
+    1,
+    0,
     'nut allergy'::text
   ),
   'submit_rsvp updates only RSVP fields and leaves name, phone, and group unchanged'
@@ -175,7 +175,7 @@ select lives_ok(
   $$ select public.submit_rsvp(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     'declined',
-    99, 99, true, true, true, 'should be cleared'
+    99, 1, 1, 1, 1, 'should be cleared'
   ) $$,
   'submit_rsvp accepts declined and ignores counts/diet from the payload'
 );
@@ -184,11 +184,11 @@ reset role;
 
 select is(
   (
-    select row(status, guests_count, children_count, is_vegetarian, other_dietary_notes, phone)
+    select row(status, guests_count, vegetarian_count, kids_meal_count, other_dietary_notes, phone)
     from public.guests
     where id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
   ),
-  row('declined'::text, 0, 0, false, null::text, '0500000099'::text),
+  row('declined'::text, 0, 0, 0, null::text, '0500000099'::text),
   'declining clears RSVP counts and diet without changing phone'
 );
 

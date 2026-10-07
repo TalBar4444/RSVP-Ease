@@ -1,13 +1,5 @@
 import type { Guest } from '../../types/guest';
-import { DIET_LABELS } from './guestDiet';
-
-function getDietLabels(guest: Pick<Guest, 'is_vegetarian' | 'is_vegan' | 'is_gluten_free'>): string[] {
-  const labels: string[] = [];
-  if (guest.is_vegetarian) labels.push(DIET_LABELS.vegetarian);
-  if (guest.is_vegan) labels.push(DIET_LABELS.vegan);
-  if (guest.is_gluten_free) labels.push(DIET_LABELS.glutenFree);
-  return labels;
-}
+import { guestDietBadges } from './guestDiet';
 
 export default function DietaryBadges({
   guest,
@@ -16,7 +8,7 @@ export default function DietaryBadges({
   guest: Guest;
   align?: 'center' | 'start';
 }) {
-  const labels = getDietLabels(guest);
+  const labels = guestDietBadges(guest);
   const isStart = align === 'start';
 
   if (labels.length === 0 && !guest.other_dietary_notes) {
@@ -27,12 +19,12 @@ export default function DietaryBadges({
     <div className={`flex flex-col gap-1 ${isStart ? 'items-start' : 'items-center'}`}>
       {labels.length > 0 ? (
         <div className={`flex flex-wrap gap-1 ${isStart ? 'justify-start' : 'justify-center'}`}>
-          {labels.map((label) => (
+          {labels.map((item) => (
             <span
-              key={label}
+              key={item.key}
               className="inline-flex whitespace-nowrap rounded-md border border-[#C5A059]/80 bg-[#C5A059] px-2 py-0.5 text-xs font-medium text-white"
             >
-              {label}
+              {item.label}
             </span>
           ))}
         </div>

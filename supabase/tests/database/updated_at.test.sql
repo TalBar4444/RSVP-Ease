@@ -39,9 +39,9 @@ select public.submit_rsvp(
   'attending',
   1,
   0,
-  false,
-  false,
-  false,
+  0,
+  0,
+  0,
   null
 );
 

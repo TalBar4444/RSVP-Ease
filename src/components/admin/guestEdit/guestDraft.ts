@@ -1,4 +1,5 @@
 import type { GuestUpdateInput } from '../../../lib/adminGuests';
+import { clampDietCounts, specialMealTotal, type DietCounts } from '../../../lib/dietCounts';
 import { toWhatsAppNumber } from '../../../lib/guestInvites';
 import {
   isGuestStatus,
@@ -19,14 +20,33 @@ export type GuestDraft = {
   newGroupName: string;
   status: GuestStatus;
   guestsCount: number;
-  childrenCount: number;
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
+  vegetarianCount: number;
+  veganCount: number;
+  glutenFreeCount: number;
+  kidsMealCount: number;
   otherDietaryNotes: string;
 };
 
+function dietFromDraft(draft: Pick<GuestDraft, keyof DietCounts>): DietCounts {
+  return {
+    vegetarianCount: draft.vegetarianCount,
+    veganCount: draft.veganCount,
+    glutenFreeCount: draft.glutenFreeCount,
+    kidsMealCount: draft.kidsMealCount,
+  };
+}
+
 export function guestToDraft(guest: Guest): GuestDraft {
+  const diets = clampDietCounts(
+    {
+      vegetarianCount: guest.vegetarian_count,
+      veganCount: guest.vegan_count,
+      glutenFreeCount: guest.gluten_free_count,
+      kidsMealCount: guest.kids_meal_count,
+    },
+    guest.guests_count,
+  );
+
   return {
     name: guest.name,
     phone: guest.phone ?? '',
@@ -35,10 +55,10 @@ export function guestToDraft(guest: Guest): GuestDraft {
     newGroupName: '',
     status: guest.status,
     guestsCount: guest.guests_count,
-    childrenCount: guest.children_count,
-    isVegetarian: guest.is_vegetarian,
-    isVegan: guest.is_vegan,
-    isGlutenFree: guest.is_gluten_free,
+    vegetarianCount: diets.vegetarianCount,
+    veganCount: diets.veganCount,
+    glutenFreeCount: diets.glutenFreeCount,
+    kidsMealCount: diets.kidsMealCount,
     otherDietaryNotes: (guest.other_dietary_notes ?? '').slice(0, MAX_DIETARY_NOTES_LENGTH),
   };
 }
@@ -52,10 +72,10 @@ export function guestDraftsEqual(left: GuestDraft, right: GuestDraft): boolean {
     left.newGroupName === right.newGroupName &&
     left.status === right.status &&
     left.guestsCount === right.guestsCount &&
-    left.childrenCount === right.childrenCount &&
-    left.isVegetarian === right.isVegetarian &&
-    left.isVegan === right.isVegan &&
-    left.isGlutenFree === right.isGlutenFree &&
+    left.vegetarianCount === right.vegetarianCount &&
+    left.veganCount === right.veganCount &&
+    left.glutenFreeCount === right.glutenFreeCount &&
+    left.kidsMealCount === right.kidsMealCount &&
     left.otherDietaryNotes === right.otherDietaryNotes
   );
 }
@@ -79,6 +99,18 @@ function isCountInRange(value: number, min: number, max: number): boolean {
   return Number.isInteger(value) && value >= min && value <= max;
 }
 
+export function applyDietCounts(draft: GuestDraft, diets: DietCounts, guestsCount = draft.guestsCount): GuestDraft {
+  const next = clampDietCounts(diets, guestsCount);
+  return {
+    ...draft,
+    guestsCount,
+    vegetarianCount: next.vegetarianCount,
+    veganCount: next.veganCount,
+    glutenFreeCount: next.glutenFreeCount,
+    kidsMealCount: next.kidsMealCount,
+  };
+}
+
 export function validateGuestDraft(draft: GuestDraft): GuestDraftValidation {
   const trimmedName = draft.name.trim();
   const trimmedPhone = draft.phone.trim();
@@ -99,31 +131,25 @@ export function validateGuestDraft(draft: GuestDraft): GuestDraftValidation {
   const groupAffiliation = resolvedGroupAffiliation(draft);
 
   let guestsCount = draft.guestsCount;
-  let childrenCount = draft.childrenCount;
-  let isVegetarian = draft.isVegetarian;
-  let isVegan = draft.isVegan;
-  let isGlutenFree = draft.isGlutenFree;
+  let diets = dietFromDraft(draft);
   let otherDietaryNotes = draft.otherDietaryNotes.trim().slice(0, MAX_DIETARY_NOTES_LENGTH) || null;
 
   if (draft.status === 'declined') {
     guestsCount = 0;
-    childrenCount = 0;
-    isVegetarian = false;
-    isVegan = false;
-    isGlutenFree = false;
+    diets = clampDietCounts(diets, 0);
     otherDietaryNotes = null;
   } else if (draft.status === 'attending') {
     if (!isCountInRange(guestsCount, 1, MAX_PARTY_COUNT)) {
-      return { ok: false, error: 'יש לבחור בין 1 ל-50 מבוגרים.' };
+      return { ok: false, error: 'יש לבחור בין 1 ל-50 אורחים.' };
     }
-    if (!isCountInRange(childrenCount, 0, MAX_PARTY_COUNT)) {
-      return { ok: false, error: 'מספר הילדים חייב להיות בין 0 ל-50.' };
+    diets = clampDietCounts(diets, guestsCount);
+    if (specialMealTotal(diets) > guestsCount) {
+      return { ok: false, error: 'סך המנות המיוחדות לא יכול לעלות על מספר האורחים.' };
     }
-  } else if (
-    !isCountInRange(guestsCount, 0, MAX_PARTY_COUNT) ||
-    !isCountInRange(childrenCount, 0, MAX_PARTY_COUNT)
-  ) {
+  } else if (!isCountInRange(guestsCount, 0, MAX_PARTY_COUNT)) {
     return { ok: false, error: 'מספר האורחים חייב להיות בין 0 ל-50.' };
+  } else {
+    diets = clampDietCounts(diets, guestsCount);
   }
 
   return {
@@ -134,10 +160,10 @@ export function validateGuestDraft(draft: GuestDraft): GuestDraftValidation {
       groupAffiliation,
       status: draft.status,
       guestsCount,
-      childrenCount,
-      isVegetarian,
-      isVegan,
-      isGlutenFree,
+      vegetarianCount: diets.vegetarianCount,
+      veganCount: diets.veganCount,
+      glutenFreeCount: diets.glutenFreeCount,
+      kidsMealCount: diets.kidsMealCount,
       otherDietaryNotes,
     },
   };

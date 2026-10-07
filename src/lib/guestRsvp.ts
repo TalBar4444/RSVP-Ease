@@ -8,17 +8,22 @@ export function isGuestId(value: string): boolean {
   return UUID_RE.test(value);
 }
 
+function isCount(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
 function parseGuestRsvp(data: unknown): GuestRsvp | null {
   if (!data || typeof data !== 'object') return null;
 
   const row = data as Record<string, unknown>;
   if (typeof row.id !== 'string' || typeof row.name !== 'string') return null;
   if (!isGuestStatus(row.status)) return null;
-  if (typeof row.guests_count !== 'number' || typeof row.children_count !== 'number') return null;
   if (
-    typeof row.is_vegetarian !== 'boolean' ||
-    typeof row.is_vegan !== 'boolean' ||
-    typeof row.is_gluten_free !== 'boolean'
+    !isCount(row.guests_count) ||
+    !isCount(row.vegetarian_count) ||
+    !isCount(row.vegan_count) ||
+    !isCount(row.gluten_free_count) ||
+    !isCount(row.kids_meal_count)
   ) {
     return null;
   }
@@ -28,10 +33,10 @@ function parseGuestRsvp(data: unknown): GuestRsvp | null {
     name: row.name,
     status: row.status,
     guests_count: row.guests_count,
-    children_count: row.children_count,
-    is_vegetarian: row.is_vegetarian,
-    is_vegan: row.is_vegan,
-    is_gluten_free: row.is_gluten_free,
+    vegetarian_count: row.vegetarian_count,
+    vegan_count: row.vegan_count,
+    gluten_free_count: row.gluten_free_count,
+    kids_meal_count: row.kids_meal_count,
     other_dietary_notes: typeof row.other_dietary_notes === 'string' ? row.other_dietary_notes : null,
   };
 }
@@ -44,24 +49,34 @@ export async function fetchGuestRsvp(guestId: string): Promise<GuestRsvp | null>
   return parseGuestRsvp(data);
 }
 
+export async function recordGuestLinkOpen(guestId: string): Promise<void> {
+  if (!isGuestId(guestId)) return;
+  if (typeof document !== 'undefined' && document.visibilityState !== 'visible') return;
+
+  const { error } = await supabase.rpc('record_link_open', { guest_id: guestId });
+  if (error) {
+    console.error(error);
+  }
+}
+
 export async function submitGuestRsvp(input: {
   guestId: string;
   status: Extract<GuestStatus, 'attending' | 'declined'>;
   guestsCount: number;
-  childrenCount: number;
-  isVegetarian: boolean;
-  isVegan: boolean;
-  isGlutenFree: boolean;
+  vegetarianCount: number;
+  veganCount: number;
+  glutenFreeCount: number;
+  kidsMealCount: number;
   otherDietaryNotes: string | null;
 }): Promise<void> {
   const { error } = await supabase.rpc('submit_rsvp', {
     guest_id: input.guestId,
     status: input.status,
     guests_count: input.guestsCount,
-    children_count: input.childrenCount,
-    is_vegetarian: input.isVegetarian,
-    is_vegan: input.isVegan,
-    is_gluten_free: input.isGlutenFree,
+    vegetarian_count: input.vegetarianCount,
+    vegan_count: input.veganCount,
+    gluten_free_count: input.glutenFreeCount,
+    kids_meal_count: input.kidsMealCount,
     other_dietary_notes: input.otherDietaryNotes,
   });
 

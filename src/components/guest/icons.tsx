@@ -1,32 +1,29 @@
+const circleIconClass =
+  'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#C5A059]/85 text-[#B88D3E]';
+
 export function IconQuestion() {
   return (
-    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#C5A059]/85 text-[#B88D3E]">
-      <span className="text-xl font-light leading-none">?</span>
-    </span>
-  );
-}
-
-export function IconPeople() {
-  return (
-    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#C5A059]/85 text-[#B88D3E]">
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <circle cx="9" cy="8" r="2.1" />
-        <circle cx="15.2" cy="8.6" r="1.7" />
-        <path d="M4.6 17.8c.5-2.8 2.3-4.3 4.4-4.3 2.1 0 3.9 1.5 4.4 4.3" strokeLinecap="round" />
-        <path d="M13.2 13.8c1.5-.3 3.3 0 4.6 1.3.6.6 1 1.5 1.2 2.7" strokeLinecap="round" />
+    <span className={circleIconClass} aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+        <path d="M9.2 9a2.8 2.8 0 1 1 4.4 2.3c-.8.5-1.4 1.15-1.4 2.2" />
+        <circle cx="12.2" cy="17.15" r="0.95" fill="currentColor" stroke="none" />
       </svg>
     </span>
   );
 }
 
-export function IconChild() {
+export function IconFamily() {
   return (
-    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#C5A059]/85 text-[#B88D3E]">
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <circle cx="12" cy="12" r="7.2" />
-        <circle cx="9.4" cy="10.8" r="0.7" fill="currentColor" stroke="none" />
-        <circle cx="14.6" cy="10.8" r="0.7" fill="currentColor" stroke="none" />
-        <path d="M9.4 14.4c.7 1.1 1.6 1.6 2.6 1.6s1.9-.5 2.6-1.6" strokeLinecap="round" />
+    <span className={circleIconClass} aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <g transform="translate(0 0.7)">
+          <circle cx="7.4" cy="7.1" r="1.9" />
+          <path d="M3.8 17.8c.4-2.6 1.9-4 3.6-4s3.2 1.4 3.6 4" strokeLinecap="round" />
+          <circle cx="16.6" cy="7.1" r="1.9" />
+          <path d="M13 17.8c.4-2.6 1.9-4 3.6-4s3.2 1.4 3.6 4" strokeLinecap="round" />
+          <circle cx="12" cy="9.6" r="1.55" />
+          <path d="M9.7 17.8c.3-1.8 1.2-2.7 2.3-2.7s2 0.9 2.3 2.7" strokeLinecap="round" />
+        </g>
       </svg>
     </span>
   );
@@ -34,15 +31,15 @@ export function IconChild() {
 
 export function IconWheat() {
   return (
-    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#C5A059]/85 text-[#B88D3E]">
-      <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.4">
-        <path d="M12 20V8" strokeLinecap="round" />
-        <path d="M12 9.2c-1.8-1.2-3.5-1-4.7.2 1.4 1.4 3.1 1.5 4.7-.2Z" />
-        <path d="M12 9.2c1.8-1.2 3.5-1 4.7.2-1.4 1.4-3.1 1.5-4.7-.2Z" />
-        <path d="M12 12.8c-1.8-1.2-3.5-1-4.7.2 1.4 1.4 3.1 1.5 4.7-.2Z" />
-        <path d="M12 12.8c1.8-1.2 3.5-1 4.7.2-1.4 1.4-3.1 1.5-4.7-.2Z" />
-        <path d="M12 6.6c-1.1-1.2-2.2-1.3-3.1-.5 1 .9 2 .9 3.1.5Z" />
-        <path d="M12 6.6c1.1-1.2 2.2-1.3 3.1-.5-1 .9-2 .9-3.1.5Z" />
+    <span className={circleIconClass} aria-hidden="true">
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.45">
+        <path d="M12 19.4V5.8" strokeLinecap="round" />
+        <path d="M12 7.3c-1.75-1.1-3.4-.95-4.55.3 1.35 1.3 3.05 1.45 4.55-.3Z" />
+        <path d="M12 7.3c1.75-1.1 3.4-.95 4.55.3-1.35 1.3-3.05 1.45-4.55-.3Z" />
+        <path d="M12 10.7c-1.75-1.1-3.4-.95-4.55.3 1.35 1.3 3.05 1.45 4.55-.3Z" />
+        <path d="M12 10.7c1.75-1.1 3.4-.95 4.55.3-1.35 1.3-3.05 1.45-4.55-.3Z" />
+        <path d="M12 14.1c-1.75-1.1-3.4-.95-4.55.3 1.35 1.3 3.05 1.45 4.55-.3Z" />
+        <path d="M12 14.1c1.75-1.1 3.4-.95 4.55.3-1.35 1.3-3.05 1.45-4.55-.3Z" />
       </svg>
     </span>
   );

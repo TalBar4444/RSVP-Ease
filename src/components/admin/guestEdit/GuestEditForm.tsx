@@ -1,36 +1,24 @@
-import { useEffect, useRef, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import { remainingSpecialMeals, type DietCounts } from '../../../lib/dietCounts';
+import { MAX_DIETARY_NOTES_LENGTH } from '../../../types/guest';
 import FormField, { adminInputClassName } from '../FormField';
 import { DIET_LABELS } from '../guestDiet';
 import { GUEST_STATUSES, STATUS_LABELS, STATUS_STYLES } from '../guestStatus';
-import { MAX_DIETARY_NOTES_LENGTH } from '../../../types/guest';
-import { MAX_PARTY_COUNT, NEW_GROUP_VALUE, parseCount, type GuestDraft } from './guestDraft';
+import {
+  applyDietCounts,
+  MAX_PARTY_COUNT,
+  NEW_GROUP_VALUE,
+  parseCount,
+  type GuestDraft,
+} from './guestDraft';
 
-function ChoiceChip({
-  selected,
-  onClick,
-  disabled,
-  children,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  disabled?: boolean;
-  children: ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={disabled}
-      aria-pressed={selected}
-      className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-60 ${
-        selected
-          ? 'border-[#C5A059] bg-[#C5A059] text-white'
-          : 'border-[#C5A059]/60 bg-white text-[#6F7C91] hover:border-[#C5A059] hover:bg-[#FBF8F2]'
-      }`}
-    >
-      {children}
-    </button>
-  );
+function draftDiets(draft: GuestDraft): DietCounts {
+  return {
+    vegetarianCount: draft.vegetarianCount,
+    veganCount: draft.veganCount,
+    glutenFreeCount: draft.glutenFreeCount,
+    kidsMealCount: draft.kidsMealCount,
+  };
 }
 
 function GroupAffiliationField({
@@ -130,10 +118,24 @@ export default function GuestEditForm({
     onDraftChange((current) => ({ ...current, ...patch }));
   };
 
-  const handleCountChange = (field: 'guestsCount' | 'childrenCount', value: string) => {
+  const handleGuestsCountChange = (value: string) => {
     const next = parseCount(value);
     if (next === null) return;
-    patchDraft({ [field]: next });
+    onDraftChange((current) => applyDietCounts(current, draftDiets(current), next));
+  };
+
+  const handleDietCountChange = (field: keyof DietCounts, value: string) => {
+    const parsed = parseCount(value);
+    if (parsed === null) return;
+    onDraftChange((current) => {
+      const currentDiets = draftDiets(current);
+      const remaining = remainingSpecialMeals(currentDiets, current.guestsCount);
+      const max = currentDiets[field] + remaining;
+      return applyDietCounts(current, {
+        ...currentDiets,
+        [field]: Math.min(Math.max(0, parsed), max),
+      });
+    });
   };
 
   return (
@@ -202,56 +204,69 @@ export default function GuestEditForm({
 
       {!countsLocked ? (
         <>
-          <div className="grid grid-cols-2 gap-3">
-            <FormField id="guest-edit-adults" label="מבוגרים">
-              <input
-                id="guest-edit-adults"
-                type="number"
-                min={attending ? 1 : 0}
-                max={MAX_PARTY_COUNT}
-                value={draft.guestsCount}
-                disabled={saving}
-                onChange={(event) => handleCountChange('guestsCount', event.target.value)}
-                className={adminInputClassName}
-              />
-            </FormField>
-            <FormField id="guest-edit-children" label="ילדים">
-              <input
-                id="guest-edit-children"
-                type="number"
-                min={0}
-                max={MAX_PARTY_COUNT}
-                value={draft.childrenCount}
-                disabled={saving}
-                onChange={(event) => handleCountChange('childrenCount', event.target.value)}
-                className={adminInputClassName}
-              />
-            </FormField>
-          </div>
+          <FormField id="guest-edit-guests" label="אורחים">
+            <input
+              id="guest-edit-guests"
+              type="number"
+              min={attending ? 1 : 0}
+              max={MAX_PARTY_COUNT}
+              value={draft.guestsCount}
+              disabled={saving}
+              onChange={(event) => handleGuestsCountChange(event.target.value)}
+              className={adminInputClassName}
+            />
+          </FormField>
           <div>
             <p className="mb-1.5 text-sm font-medium text-[#082D58]">העדפות תזונה</p>
-            <div className="flex flex-wrap gap-2">
-              <ChoiceChip
-                selected={draft.isVegetarian}
-                disabled={saving}
-                onClick={() => patchDraft({ isVegetarian: !draft.isVegetarian })}
-              >
-                {DIET_LABELS.vegetarian}
-              </ChoiceChip>
-              <ChoiceChip
-                selected={draft.isVegan}
-                disabled={saving}
-                onClick={() => patchDraft({ isVegan: !draft.isVegan })}
-              >
-                {DIET_LABELS.vegan}
-              </ChoiceChip>
-              <ChoiceChip
-                selected={draft.isGlutenFree}
-                disabled={saving}
-                onClick={() => patchDraft({ isGlutenFree: !draft.isGlutenFree })}
-              >
-                {DIET_LABELS.glutenFree}
-              </ChoiceChip>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField id="guest-edit-vegetarian" label={DIET_LABELS.vegetarian}>
+                <input
+                  id="guest-edit-vegetarian"
+                  type="number"
+                  min={0}
+                  max={draft.vegetarianCount + remainingSpecialMeals(draftDiets(draft), draft.guestsCount)}
+                  value={draft.vegetarianCount}
+                  disabled={saving}
+                  onChange={(event) => handleDietCountChange('vegetarianCount', event.target.value)}
+                  className={adminInputClassName}
+                />
+              </FormField>
+              <FormField id="guest-edit-vegan" label={DIET_LABELS.vegan}>
+                <input
+                  id="guest-edit-vegan"
+                  type="number"
+                  min={0}
+                  max={draft.veganCount + remainingSpecialMeals(draftDiets(draft), draft.guestsCount)}
+                  value={draft.veganCount}
+                  disabled={saving}
+                  onChange={(event) => handleDietCountChange('veganCount', event.target.value)}
+                  className={adminInputClassName}
+                />
+              </FormField>
+              <FormField id="guest-edit-gluten-free" label={DIET_LABELS.glutenFree}>
+                <input
+                  id="guest-edit-gluten-free"
+                  type="number"
+                  min={0}
+                  max={draft.glutenFreeCount + remainingSpecialMeals(draftDiets(draft), draft.guestsCount)}
+                  value={draft.glutenFreeCount}
+                  disabled={saving}
+                  onChange={(event) => handleDietCountChange('glutenFreeCount', event.target.value)}
+                  className={adminInputClassName}
+                />
+              </FormField>
+              <FormField id="guest-edit-kids-meal" label={DIET_LABELS.kidsMeal}>
+                <input
+                  id="guest-edit-kids-meal"
+                  type="number"
+                  min={0}
+                  max={draft.kidsMealCount + remainingSpecialMeals(draftDiets(draft), draft.guestsCount)}
+                  value={draft.kidsMealCount}
+                  disabled={saving}
+                  onChange={(event) => handleDietCountChange('kidsMealCount', event.target.value)}
+                  className={adminInputClassName}
+                />
+              </FormField>
             </div>
           </div>
           <FormField id="guest-edit-notes" label="הערות תזונה">
